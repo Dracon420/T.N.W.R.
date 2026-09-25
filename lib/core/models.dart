@@ -1,4 +1,4 @@
-/// Data model for T.N.D.R. Plain immutable classes with hand-written JSON so
+/// Data model for T.N.W.R. Plain immutable classes with hand-written JSON so
 /// the same shapes can be stored locally now and synced to Supabase later.
 library;
 
