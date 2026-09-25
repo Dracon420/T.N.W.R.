@@ -19,8 +19,9 @@ class Ringer {
   bool get isRinging => _playing != null;
 
   Future<void> apply(EscalationState state) async {
+    final starting = _playing == null;
     if (_playing != state.sound) {
-      if (_playing == null && _volume.isSupported) {
+      if (starting && _volume.isSupported) {
         _volumeBeforeAlarm = await _safe(_volume.get);
       }
       _playing = state.sound;
@@ -28,7 +29,10 @@ class Ringer {
     }
 
     if (_volume.isSupported) {
-      final current = await _safe(_volume.get);
+      // On (re)start, set the exact level, even if that's lower than the
+      // user's volume, so the alarm really starts soft and escalates. After
+      // that it only goes up: the user can raise it, never lower it.
+      final current = starting ? null : await _safe(_volume.get);
       if (current == null || current < state.volume - 0.01) {
         await _safe(() => _volume.set(state.volume));
       }

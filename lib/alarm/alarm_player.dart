@@ -57,9 +57,23 @@ class _WindowsPlayer implements AlarmPlayer {
 
 class _AudioplayersPlayer implements AlarmPlayer {
   final _player = AudioPlayer();
+  bool _configured = false;
 
   @override
   Future<void> loop(String asset) async {
+    if (!_configured && Platform.isAndroid) {
+      // Alarm usage: plays on the alarm stream, which silent and vibrate
+      // mode don't mute, and which SystemVolume raises.
+      await _player.setAudioContext(AudioContext(
+        android: const AudioContextAndroid(
+          usageType: AndroidUsageType.alarm,
+          contentType: AndroidContentType.sonification,
+          audioFocus: AndroidAudioFocus.gainTransient,
+          stayAwake: true,
+        ),
+      ));
+    }
+    _configured = true;
     await _player.setReleaseMode(ReleaseMode.loop);
     await _player.play(AssetSource('sounds/$asset'));
   }

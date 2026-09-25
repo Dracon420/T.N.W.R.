@@ -35,9 +35,11 @@ makes the next ring start louder.
 
 - ⏰ **Reminders** that ring once, every day, or on chosen days of the week.
 - 📈 **Escalating volume**: starts at the volume you pick and turns itself up
-  on a schedule. On Windows it controls the **real system volume**: it unmutes
-  your PC and turns the volume back up if you lower it. When you're done, your
-  volume goes back to where it was.
+  on a schedule. It controls the **real device volume** (the PC's volume on
+  Windows, the alarm volume on Android). It starts at your chosen level even if
+  your volume was higher, turns it back up if you lower it, and unmutes. On
+  Android it rings even in silent or vibrate mode, like the Clock app's alarms.
+  When you're done, your volume goes back to where it was.
 - 🔊 **Six alarm sounds**, from a soft chime to "max blast", including
   **low-pitched sounds for people who are hard of hearing**.
 - 🔁 **Escalation sound**: switches to a harsher sound if you ignore it too long.
@@ -62,7 +64,7 @@ makes the next ring start louder.
 | Platform | Status |
 |---|---|
 | **Windows** | ✅ Working: everything in the feature list |
-| **Android** | 🟡 Works **while the app is open**, including pausing for calls. Ringing with the app closed is in progress. Volume ramps within the app, not the phone's system volume yet |
+| **Android** | 🟡 Works **while the app is open**: rings through silent/vibrate mode, controls the phone's alarm volume, pauses for calls. Ringing with the app closed is in progress |
 | **iPhone** | 🔜 Planned (iOS 26+ alarms that ring through silent mode) |
 | **Mac** | 🔜 Planned |
 | **Alexa** | 🔜 Planned: your Echo announces the reminder and repeats it until the task is done |
@@ -224,7 +226,7 @@ known to trigger photosensitive seizures.
 | **"Windows protected your PC"** | Click **More info → Run anyway**. The beta isn't code-signed yet. |
 | **No sound on Windows** | Check that a speaker or headphones is the default playback device. T.N.W.R. unmutes and raises the default device only. |
 | **Alarm didn't ring after a reboot** | Launch-at-sign-in only turns on after running a **release** build once. Open T.N.W.R. manually once. |
-| **Alarm didn't ring on Android** | For now the app must be open (see Platform status). |
+| **Alarm didn't ring on Android** | For now the app must be open (see Platform status). If Do Not Disturb is on, make sure **Alarms** are allowed in its settings (they are by default). |
 | **Want to start fresh** | Quit T.N.W.R. and delete `%APPDATA%\com.nagalarm\T.N.W.R\` (holds `tasks.json` and `settings.json`). |
 | **Two copies running** | Only run one copy at a time for now. A duplicate would ring twice. |
 
@@ -240,7 +242,8 @@ tracking. Reminders and settings are plain files in the app's data folder.
 - [x] Sound choices for every hearing level, screen flash, light/dark theme
 - [x] Math and typing proofs
 - [x] Pause for phone calls and video chats (Android, while the app is open)
-- [ ] Android: rings with the app closed, lock-screen alarm, system volume, vibration
+- [x] Android: rings through silent mode, controls the alarm volume
+- [ ] Android: rings with the app closed, lock-screen alarm, vibration
 - [ ] More proofs: QR / NFC tag, location, step count, photo (on-device check + approval by a chosen person)
 - [ ] Sync reminders between phone and PC
 - [ ] iPhone (AlarmKit) and Mac
