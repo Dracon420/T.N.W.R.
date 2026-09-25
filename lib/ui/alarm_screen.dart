@@ -1,0 +1,195 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../app_controller.dart';
+import '../core/models.dart';
+import '../core/schedule.dart';
+import '../proof/proof.dart';
+
+/// Full-screen alarm. The only ways out are passing the task's proofs or
+/// using one of the limited snoozes.
+class AlarmScreen extends StatefulWidget {
+  const AlarmScreen({super.key, required this.controller, required this.task});
+
+  final AppController controller;
+  final NagTask task;
+
+  @override
+  State<AlarmScreen> createState() => _AlarmScreenState();
+}
+
+class _AlarmScreenState extends State<AlarmScreen> {
+  final Set<int> _passed = {};
+  int? _active;
+
+  /// Flash at 1 Hz: well under the 3 Hz photosensitive-seizure threshold.
+  Timer? _flasher;
+  bool _flashOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.task.escalation.flashScreen) {
+      _flasher = Timer.periodic(const Duration(milliseconds: 500),
+          (_) => setState(() => _flashOn = !_flashOn));
+    }
+  }
+
+  @override
+  void dispose() {
+    _flasher?.cancel();
+    super.dispose();
+  }
+
+  List<ProofChallenge> get _challenges =>
+      [for (final p in widget.task.proofs) challengeFor(p)];
+
+  void _onPassed(int index) {
+    setState(() {
+      _passed.add(index);
+      _active = null;
+    });
+    if (proofSatisfied(
+        widget.task.proofMode, widget.task.proofs.length, _passed.length)) {
+      widget.controller.complete(widget.task);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final task = widget.task;
+    final challenges = _challenges;
+
+    final scheme = theme.colorScheme;
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: _flashOn ? scheme.error : scheme.errorContainer,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: _active != null
+                    ? _ActiveChallenge(
+                        challenge: challenges[_active!],
+                        onPassed: () => _onPassed(_active!),
+                        onBack: () => setState(() => _active = null),
+                      )
+                    : _overview(theme, task, challenges),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _overview(
+      ThemeData theme, NagTask task, List<ProofChallenge> challenges) {
+    final onColor = _flashOn
+        ? theme.colorScheme.onError
+        : theme.colorScheme.onErrorContainer;
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final elapsed =
+            DateTime.now().difference(task.ringingSince ?? DateTime.now());
+        final volume = widget.controller.current?.volume ?? 0;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.alarm, size: 72, color: onColor),
+            const SizedBox(height: 12),
+            Text(task.title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.displaySmall
+                    ?.copyWith(color: onColor, fontWeight: FontWeight.bold)),
+            if (task.notes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(task.notes,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(color: onColor)),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              'Ringing for ${_fmt(elapsed)} · volume ${(volume * 100).round()}%',
+              style: theme.textTheme.bodyLarge?.copyWith(color: onColor),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              task.proofMode == ProofMode.all || challenges.length == 1
+                  ? 'Prove it to turn this off:'
+                  : 'Prove it any one of these ways:',
+              style: theme.textTheme.titleMedium?.copyWith(color: onColor),
+            ),
+            const SizedBox(height: 8),
+            for (final (i, c) in challenges.indexed)
+              Card(
+                child: ListTile(
+                  leading: Icon(_passed.contains(i)
+                      ? Icons.check_circle
+                      : c.isSupportedHere
+                          ? Icons.play_circle
+                          : Icons.phonelink_erase),
+                  title: Text(c.title),
+                  subtitle: Text(
+                      c.isSupportedHere ? c.description : c.unsupportedHint),
+                  enabled: c.isSupportedHere && !_passed.contains(i),
+                  onTap: () => setState(() => _active = i),
+                ),
+              ),
+            const SizedBox(height: 16),
+            if (widget.controller.canSnooze(task))
+              OutlinedButton.icon(
+                icon: const Icon(Icons.snooze),
+                label: Text(
+                    'Snooze ${task.escalation.snoozeMinutes} min (comes back louder)'),
+                onPressed: () => widget.controller.snooze(task),
+              )
+            else
+              Text('No snoozes left.',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: onColor)),
+          ],
+        );
+      },
+    );
+  }
+
+  static String _fmt(Duration d) =>
+      '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+}
+
+class _ActiveChallenge extends StatelessWidget {
+  const _ActiveChallenge(
+      {required this.challenge, required this.onPassed, required this.onBack});
+
+  final ProofChallenge challenge;
+  final VoidCallback onPassed;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
+              Expanded(
+                  child: Text(challenge.title,
+                      style: Theme.of(context).textTheme.titleLarge)),
+            ]),
+            const SizedBox(height: 16),
+            challenge.build(onPassed),
+          ],
+        ),
+      ),
+    );
+  }
+}
