@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'alarm/alarm_engine.dart';
+import 'alexa/alexa_link.dart';
 import 'alarm/ringer.dart';
 import 'alarm/system_volume.dart';
 import 'app_controller.dart';
@@ -34,15 +36,21 @@ Future<void> main(List<String> args) async {
       surface: shell,
       engine: Platform.isAndroid ? AndroidAlarmEngine() : null)
     ..start();
-  runApp(NagAlarmApp(controller: controller, settings: settings));
+  final alexa = AlexaLink(store);
+  unawaited(alexa.init()); // Network: don't hold up startup.
+  runApp(NagAlarmApp(controller: controller, settings: settings, alexa: alexa));
 }
 
 class NagAlarmApp extends StatelessWidget {
   const NagAlarmApp(
-      {super.key, required this.controller, required this.settings});
+      {super.key,
+      required this.controller,
+      required this.settings,
+      required this.alexa});
 
   final AppController controller;
   final AppSettings settings;
+  final AlexaLink alexa;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +63,8 @@ class NagAlarmApp extends StatelessWidget {
         theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
         darkTheme: ThemeData(
             colorSchemeSeed: Colors.deepOrange, brightness: Brightness.dark),
-        home: TaskListScreen(controller: controller, settings: settings),
+        home: TaskListScreen(
+            controller: controller, settings: settings, alexa: alexa),
         // The alarm covers everything, whatever screen was open. The normal
         // screens stay alive underneath (Offstage) and come back afterwards.
         builder: (context, child) => ListenableBuilder(

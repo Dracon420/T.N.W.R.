@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../alarm/alarm_engine.dart';
 import '../core/settings.dart';
+import '../alexa/alexa_link.dart';
+import 'alexa_screen.dart';
 import 'phone_setup.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.settings, this.engine});
+  const SettingsScreen(
+      {super.key, required this.settings, this.engine, this.alexa});
 
   final AppSettings settings;
   final AlarmEngine? engine;
+  final AlexaLink? alexa;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,19 @@ class SettingsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => PhoneSetupScreen(engine: engine))),
+              ),
+            ],
+            if (alexa case final alexa? when alexa.available) ...[
+              section('Alexa'),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.speaker),
+                title: Text(alexa.linked ? 'Alexa connected' : 'Connect Alexa'),
+                subtitle: const Text(
+                    'Your Echo says your reminders and repeats them until they are done'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => AlexaScreen(alexa: alexa))),
               ),
             ],
             section('Appearance'),

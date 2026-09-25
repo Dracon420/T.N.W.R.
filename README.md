@@ -54,6 +54,7 @@ makes the next ring start louder.
 - 📞 **Steps aside for calls (phones)**: during a phone call, video chat or
   FaceTime-style call, a ringing alarm goes quiet. It comes back after the
   call, at the same loudness it had before. The task still has to be proven.
+- 🔊 **Alexa**: link an Echo with a 6-digit code. It announces each reminder and keeps repeating it until you prove the task is done in the app.
 - 💾 **Survives restarts**: close or kill the app mid-alarm and it picks up
   right where it left off, louder, when it reopens.
 - 🌗 **Light, dark, or match-system theme.**
@@ -67,7 +68,7 @@ makes the next ring start louder.
 | **Android** | ✅ Working: rings on time **even when the app is closed or the phone is locked**, shows over the lock screen, rings through silent/vibrate mode, controls the alarm volume, pauses for calls, survives reboots. Needs a one-time [phone setup](#android) |
 | **iPhone** | 🔜 Planned (iOS 26+ alarms that ring through silent mode) |
 | **Mac** | 🔜 Planned |
-| **Alexa** | 🔜 Planned: your Echo announces the reminder and repeats it until the task is done |
+| **Alexa** | 🟡 Built, needs one-time setup ([Alexa setup guide](docs/ALEXA_SETUP.md)): your Echo announces the reminder and repeats it every 5 minutes until the task is proven done in the app |
 
 ## Installing
 
@@ -194,6 +195,7 @@ Click the ⚙️ gear in the top-right of the main screen.
 
 | Setting | What it does | Default |
 |---|---|---|
+| **Connect Alexa** | Link an Echo: **Get code**, then say *"Alexa, ask naggy wife to link code …"* ([setup guide](docs/ALEXA_SETUP.md)) | Not connected |
 | **Appearance** | System, Light, or Dark theme | System |
 | **Pause alarms during calls** | Silences a ringing alarm during phone calls, video chats and FaceTime-style calls (phones) | On |
 | **Resume after call** | How long after a call ends before the alarm comes back | 30 s (0–120 s) |
@@ -251,9 +253,10 @@ known to trigger photosensitive seizures.
 
 ## Privacy
 
-Everything stays **on your device**: no account, no internet connection, no
-tracking. Reminders and settings are plain files in the app's data folder.
-(Future sync between devices and Alexa will be opt-in.)
+Everything stays **on your device**: no account, no tracking. Reminders and
+settings are plain files in the app's data folder. Only if you **connect
+Alexa** are the titles and times of upcoming reminders sent to the server so
+your Echo can say them. See [PRIVACY.md](PRIVACY.md).
 
 ## Roadmap
 
@@ -267,7 +270,7 @@ tracking. Reminders and settings are plain files in the app's data folder.
 - [ ] More proofs: QR / NFC tag, location, step count, photo (on-device check + approval by a chosen person)
 - [ ] Sync reminders between phone and PC
 - [ ] iPhone (AlarmKit) and Mac
-- [ ] Alexa: announce and repeat until done
+- [x] Alexa: announce and repeat until done (needs [setup](docs/ALEXA_SETUP.md))
 - [ ] One-click beta downloads
 
 ---
@@ -311,7 +314,10 @@ android/app/src/main/kotlin/...  native Android code:
                 AlarmScheduler (alarm-clock alarms), AlarmReceiver (fire, reboot),
                 AlarmService (rings in the background: sound, volume, calls),
                 AlarmStore (shared data), MainActivity (bridge to Dart, setup)
-tools/          sound generator
+alexa/          Alexa skill: voice model, Node.js code, icons
+supabase/       backend for Alexa: SQL + edge functions (alexa-code/-pair/-sync)
+docs/           setup guides
+tools/          sound and icon generators
 test/           tests
 ```
 

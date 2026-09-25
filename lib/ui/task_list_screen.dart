@@ -7,16 +7,21 @@ import '../core/settings.dart';
 import '../core/models.dart';
 import '../proof/proof.dart';
 import '../alarm/alarm_engine.dart';
+import '../alexa/alexa_link.dart';
 import 'phone_setup.dart';
 import 'settings_screen.dart';
 import 'task_edit_screen.dart';
 
 class TaskListScreen extends StatelessWidget {
   const TaskListScreen(
-      {super.key, required this.controller, required this.settings});
+      {super.key,
+      required this.controller,
+      required this.settings,
+      required this.alexa});
 
   final AppController controller;
   final AppSettings settings;
+  final AlexaLink alexa;
 
   Future<void> _edit(BuildContext context, [NagTask? task]) async {
     final saved = await Navigator.of(context).push<NagTask>(
@@ -41,7 +46,9 @@ class TaskListScreen extends StatelessWidget {
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => SettingsScreen(
-                    settings: settings, engine: controller.engine))),
+                    settings: settings,
+                    engine: controller.engine,
+                    alexa: alexa))),
           ),
         ],
       ),

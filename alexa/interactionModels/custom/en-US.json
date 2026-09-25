@@ -1,0 +1,40 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "naggy wife",
+      "intents": [
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "LinkIntent",
+          "slots": [{ "name": "code", "type": "AMAZON.NUMBER" }],
+          "samples": [
+            "link code {code}",
+            "link {code}",
+            "my code is {code}",
+            "the code is {code}",
+            "connect code {code}",
+            "pair code {code}",
+            "{code}"
+          ]
+        },
+        {
+          "name": "WhatsDueIntent",
+          "slots": [],
+          "samples": [
+            "what's due",
+            "what is due",
+            "what do I have to do",
+            "what are my reminders",
+            "what's next",
+            "what do I need to do"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}
