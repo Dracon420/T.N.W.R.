@@ -6,6 +6,8 @@ import 'dart:io';
 
 import '../alarm/alarm_player.dart';
 import '../core/models.dart';
+import '../core/cloud.dart';
+import '../proof/approval_challenge.dart';
 import '../proof/location_challenge.dart';
 import '../proof/nfc_challenge.dart';
 import '../proof/photo_challenge.dart';
@@ -40,6 +42,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   late LocationProof? _location = _find<LocationProof>();
   late StepsProof? _steps = _find<StepsProof>();
   late PhotoProof? _photo = _find<PhotoProof>();
+  late ApprovalProof? _approval = _find<ApprovalProof>();
 
   T? _find<T extends ProofSpec>() =>
       widget.task?.proofs.whereType<T>().firstOrNull;
@@ -52,6 +55,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
         ?_location,
         ?_steps,
         ?_photo,
+        ?_approval,
       ];
 
   @override
@@ -367,7 +371,69 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
             if (photo != null) setState(() => _photo = photo);
           },
         ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: canRequestApproval,
+          title: Text(_approval == null
+              ? 'Photo approved by someone'
+              : 'Photo approved by ${_approval!.approverName}'),
+          subtitle: Text(!canRequestApproval
+              ? (Cloud.configured
+                  ? _phoneOnly
+                  : 'Needs the online setup (docs/ALEXA_SETUP.md, part A)')
+              : _approval == null
+                  ? 'They get a text with your photo and tap Approve. No app needed.'
+                  : _approval!.approverPhone.isEmpty
+                      ? 'You choose how to send the link each time'
+                      : 'Link is texted to ${_approval!.approverPhone}'),
+          value: _approval != null,
+          onChanged: (on) async {
+            if (on != true) return setState(() => _approval = null);
+            final approval = await _askApprover(context);
+            if (approval != null) setState(() => _approval = approval);
+          },
+        ),
       ];
+
+  Future<ApprovalProof?> _askApprover(BuildContext context) {
+    final name = TextEditingController();
+    final phone = TextEditingController();
+    return showDialog<ApprovalProof>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Who approves the photo?'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: name,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Their name'),
+          ),
+          TextField(
+            controller: phone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+                labelText: 'Their mobile number (optional)',
+                helperText: 'Leave empty to pick how to send it each time'),
+          ),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (name.text.trim().isEmpty) return;
+              Navigator.of(dialogContext).pop(ApprovalProof(
+                  approverName: name.text.trim(),
+                  approverPhone: phone.text.trim()));
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _labelField(String hint, String value, void Function(String) apply) =>
       Padding(

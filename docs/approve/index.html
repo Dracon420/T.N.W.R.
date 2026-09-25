@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Is it done? · T.N.W.R.</title>
+<style>
+  :root {
+    --bg: #fff8f5; --card: #ffffff; --text: #231a15; --muted: #6f5d54;
+    --accent: #e65100; --ok: #2e7d32; --no: #c62828; --border: #f0dcd2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1512; --card: #2a201b; --text: #f6ebe5; --muted: #c2afa5;
+      --accent: #ff8a50; --ok: #66bb6a; --no: #ef5350; --border: #463630;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  .brand { color: var(--accent); font-weight: 700; letter-spacing: .04em; font-size: 14px; }
+  h1 { font-size: 24px; margin: 6px 0 4px; }
+  .muted { color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+          padding: 16px; margin-top: 16px; }
+  img { width: 100%; border-radius: 12px; display: block; background: var(--border); min-height: 120px; }
+  textarea { width: 100%; margin-top: 12px; padding: 10px; border-radius: 10px; font: inherit;
+             border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: vertical; }
+  .buttons { display: flex; gap: 12px; margin-top: 12px; }
+  button { flex: 1; border: 0; border-radius: 12px; padding: 14px; font: 600 17px system-ui, sans-serif;
+           color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .approve { background: var(--ok); }
+  .reject { background: var(--no); }
+  .result { font-size: 20px; font-weight: 600; text-align: center; padding: 20px 0 8px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">T.N.W.R. · THE NAGGY WIFE REMINDER</div>
+  <h1 id="heading">Loading…</h1>
+  <p class="muted" id="sub"></p>
+
+  <div class="card" id="photoCard" hidden>
+    <img id="photo" alt="Photo of the finished task">
+    <p class="muted" id="age"></p>
+  </div>
+
+  <div class="card" id="decideCard" hidden>
+    <strong>Is it really done?</strong>
+    <textarea id="note" rows="2" maxlength="200" placeholder="Optional note (e.g. &quot;the bin is still full&quot;)"></textarea>
+    <div class="buttons">
+      <button class="reject" id="reject">✗ Not done</button>
+      <button class="approve" id="approve">✓ Approve</button>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" hidden>
+    <div class="result" id="result"></div>
+    <p class="muted" id="resultSub" style="text-align:center"></p>
+  </div>
+</main>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const api = q.get('api') || '';
+  const id = q.get('id');
+  const token = q.get('t');
+  const $ = (x) => document.getElementById(x);
+
+  // Only talk to Supabase projects, so the link can't point this page elsewhere.
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(api) || !id || !token) {
+    return fail('This link looks incomplete. Ask for a new one.');
+  }
+  const endpoint = `${api}/functions/v1/approval`;
+
+  function fail(msg) {
+    $('heading').textContent = 'Link problem';
+    $('sub').textContent = msg;
+  }
+
+  function showResult(status, note) {
+    $('decideCard').hidden = true;
+    $('resultCard').hidden = false;
+    $('result').textContent = status === 'approved' ? '✓ Approved' : '✗ Marked not done';
+    $('result').style.color = status === 'approved' ? 'var(--ok)' : 'var(--no)';
+    $('resultSub').textContent = status === 'approved'
+      ? 'Their alarm will stop now.'
+      : 'Their alarm keeps going until they try again.' + (note ? ` Your note: "${note}"` : '');
+  }
+
+  function ago(iso) {
+    const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+    if (mins < 1) return 'Taken just now';
+    if (mins < 60) return `Taken ${mins} min ago`;
+    return `Taken ${Math.round(mins / 60)} h ago`;
+  }
+
+  async function load() {
+    let data;
+    try {
+      const res = await fetch(`${endpoint}?id=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`);
+      data = await res.json();
+      if (!res.ok) return fail(data.error || 'This link is invalid or has expired.');
+    } catch (e) {
+      return fail("Couldn't load the photo. Check your connection and refresh.");
+    }
+    $('heading').textContent = data.title;
+    $('sub').textContent = `${data.approverName}, they say this is done. Take a look.`;
+    if (data.photoUrl) {
+      $('photo').src = data.photoUrl;
+      $('age').textContent = ago(data.createdAt);
+      $('photoCard').hidden = false;
+    }
+    if (data.status === 'pending') $('decideCard').hidden = false;
+    else showResult(data.status, data.note);
+  }
+
+  async function decide(decision) {
+    $('approve').disabled = $('reject').disabled = true;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, t: token, decision, note: $('note').value.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.status);
+      showResult(data.status, $('note').value.trim());
+    } catch (e) {
+      $('approve').disabled = $('reject').disabled = false;
+      alert("Couldn't save that. Please try again.");
+    }
+  }
+
+  $('approve').onclick = () => decide('approve');
+  $('reject').onclick = () => decide('reject');
+  load();
+})();
+</script>
+</body>
+</html>

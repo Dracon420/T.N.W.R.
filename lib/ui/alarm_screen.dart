@@ -43,7 +43,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   List<ProofChallenge> get _challenges =>
-      [for (final p in widget.task.proofs) challengeFor(p)];
+      [for (final p in widget.task.proofs) challengeFor(p, taskTitle: widget.task.title)];
 
   void _onPassed(int index) {
     setState(() {

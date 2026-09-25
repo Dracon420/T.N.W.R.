@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/models.dart';
+import 'approval_challenge.dart';
 import 'location_challenge.dart';
 import 'math_challenge.dart';
 import 'nfc_challenge.dart';
@@ -25,7 +26,9 @@ abstract class ProofChallenge {
   Widget build(VoidCallback onPassed);
 }
 
-ProofChallenge challengeFor(ProofSpec spec) => switch (spec) {
+/// [taskTitle] is used by proofs that tell someone else about the task.
+ProofChallenge challengeFor(ProofSpec spec, {String taskTitle = ''}) =>
+    switch (spec) {
       MathProof() => MathChallenge(spec),
       TypingProof() => TypingChallenge(spec),
       QrProof() => ScanChallenge(spec),
@@ -33,6 +36,7 @@ ProofChallenge challengeFor(ProofSpec spec) => switch (spec) {
       LocationProof() => LocationChallenge(spec),
       StepsProof() => StepsChallenge(spec),
       PhotoProof() => PhotoChallenge(spec),
+      ApprovalProof() => ApprovalChallenge(spec, taskTitle: taskTitle),
     };
 
 /// Human-readable label for the editor's proof picker.

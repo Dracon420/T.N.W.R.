@@ -187,6 +187,9 @@ sealed class ProofSpec {
             referenceLabels:
                 (j['referenceLabels'] as List? ?? const []).cast<String>(),
             threshold: (j['threshold'] as num).toDouble()),
+        'approval' => ApprovalProof(
+            approverName: j['approverName'] as String,
+            approverPhone: j['approverPhone'] as String? ?? ''),
         final t => throw FormatException('Unknown proof type: $t'),
       };
 }
@@ -283,6 +286,21 @@ class PhotoProof extends ProofSpec {
         'referenceLabels': referenceLabels,
         'threshold': threshold,
       };
+}
+
+/// A person the user chooses (e.g. their spouse) approves a photo of the
+/// finished task from a link texted to them. Needs the online backend.
+class ApprovalProof extends ProofSpec {
+  final String approverName;
+
+  /// Where the link is texted; empty means "pick how to send it" each time.
+  final String approverPhone;
+  const ApprovalProof({required this.approverName, this.approverPhone = ''});
+  @override
+  String get type => 'approval';
+  @override
+  Map<String, dynamic> get _fields =>
+      {'approverName': approverName, 'approverPhone': approverPhone};
 }
 
 /// Whether every proof is required, or any single one is enough.

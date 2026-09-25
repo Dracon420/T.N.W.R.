@@ -66,6 +66,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Open the messaging app for photo approval links. -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="sms"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

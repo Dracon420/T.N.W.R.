@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/cloud_config.dart';
+import '../core/cloud.dart';
 import '../core/models.dart';
 import '../core/task_store.dart';
 
@@ -29,15 +29,13 @@ class AlexaLink extends ChangeNotifier {
   Timer? _debounce;
   bool _ready = false;
 
-  bool get available => cloudConfigured;
-  SupabaseClient get _db => Supabase.instance.client;
+  bool get available => Cloud.configured;
+  SupabaseClient get _db => Cloud.client;
 
   Future<void> init() async {
     if (!available) return;
     try {
-      await Supabase.initialize(url: supabaseUrl, publishableKey: supabasePublishableKey);
-      // No sign-up: each install gets an anonymous account.
-      if (_db.auth.currentSession == null) await _db.auth.signInAnonymously();
+      if (!await Cloud.ensureReady()) throw 'no connection';
       _ready = true;
       store.addListener(_scheduleSync);
       await refresh();

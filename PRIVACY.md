@@ -30,6 +30,15 @@ To remove this data, tap **Settings → Alexa → Disconnect** in the app. That
 removes your Echo reminders and the link. Disabling the skill in the Alexa app
 also stops it.
 
+## If you use "Photo approved by someone" (optional)
+
+The photo you take is uploaded to a private storage area on our server,
+along with the task title and the approver's first name (their phone number stays
+on your phone). Only someone with the link you send can see it, through a
+short-lived address. The photo is **deleted as soon as the approver taps Approve
+or Not done**. The decision and any note they write are kept so the app can
+show them to you.
+
 ## Contact
 
 Questions: open an issue at https://github.com/Dracon420/TNWR/issues

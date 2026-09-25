@@ -1,4 +1,14 @@
-# Setting up Alexa for T.N.W.R.
+# Setting up the online features: Alexa and photo approval
+
+T.N.W.R. works fully offline. Two optional features need a small free backend:
+
+- **Alexa**: Parts A–D below.
+- **Photo approved by someone**: Part A, then [Part E](#part-e-photo-approval). You can skip the Alexa parts if you only want this.
+
+---
+
+## Alexa
+
 
 This connects the app to an Echo. When a reminder is due, the Echo says it, and
 then repeats it every 5 minutes (10 times) until the task is proven done in the
@@ -110,6 +120,32 @@ To give a friend access (their Echo is on a different Amazon account):
 2. Your friend accepts the **email invite** from Amazon. The skill then appears in
    their Alexa app. Next they follow Part C step 3 on their phone or PC.
 
+## Part E: Photo approval
+
+The person approving gets a text with a link to a small web page showing the photo,
+with **Approve** and **Not done** buttons. They don't need the app. The page lives in this repo
+([`docs/approve/index.html`](approve/index.html)) and is served free by GitHub Pages.
+
+1. **Part A first** (Supabase project, anonymous sign-ins, `001_alexa.sql`), and put
+   the Project URL and publishable key in [`lib/core/cloud_config.dart`](../lib/core/cloud_config.dart).
+2. **Table and photo storage.** Supabase **SQL Editor → New query**: paste all of
+   [`supabase/migrations/002_photo_approvals.sql`](../supabase/migrations/002_photo_approvals.sql) → **Run**.
+3. **Two more functions** (Edge Functions → Deploy a new function → Via Editor):
+   - `approval-create` ← [`supabase/functions/approval-create/index.ts`](../supabase/functions/approval-create/index.ts). Keep JWT verification **on**; the app calls it.
+   - `approval` ← [`supabase/functions/approval/index.ts`](../supabase/functions/approval/index.ts). Turn **off** "Enforce JWT verification". The web page calls it, and each link carries its own secret token.
+4. **Turn on the web page.** On GitHub: the **TNWR** repo → **Settings → Pages** →
+   Source **Deploy from a branch**, Branch **main**, folder **/docs** → **Save**. After a
+   minute it's live at `https://dracon420.github.io/TNWR/approve/`. (Opening that
+   address with no link details shows "Link problem", which means it's working.)
+   If you ever host it elsewhere, set a Supabase secret `APPROVE_PAGE_URL` to the new address.
+5. **Try it.** In the app, edit a reminder → **Photo approved by someone** → enter a
+   name (and optionally their mobile number). Use **⋮ → Test: ring in 5 seconds**, then
+   **Take photo and send**. Your messaging app opens with the text ready; send it to
+   yourself first. Open the link, tap **Approve**, and the alarm stops within about 5 seconds.
+
+Privacy: photos are in a private storage bucket, reachable only through the
+link's short-lived signed address, and **deleted as soon as the approver decides**.
+
 ## Troubleshooting
 
 | Problem | Check |
@@ -118,6 +154,9 @@ To give a friend access (their Echo is on a different Amazon account):
 | "I couldn't reach the app's server" | `SUPABASE_URL` in `config.js`: it should look like `https://abcd1234.supabase.co` with no trailing slash. |
 | Linked, but the Echo never reminds | Did you say yes to reminder permission? (Alexa app → Skills → Naggy Wife → Settings → Manage permissions.) In Supabase → Edge Functions → alexa-sync → Logs, look for errors: `401/403` means the Client Id/Secret are wrong. In the skill console → Code → CloudWatch logs, look for "create failed". |
 | App says "Alexa sync failed" | Check the alexa-sync logs in Supabase. |
+| "Couldn't send the photo" | Did you run `002_photo_approvals.sql` and deploy `approval-create`? Check its logs in Supabase. |
+| Approval link says "invalid or has expired" | The `approval` function must have JWT verification **off**. Links stop working once a decision is made. |
+| Approval page doesn't load at all | GitHub → Settings → Pages must be on (main, /docs). It can take a few minutes the first time. |
 | Reminders at the wrong hour | The Echo uses its own time zone setting (Alexa app → Devices → your Echo → Time Zone). It should match your phone. |
 
 **Heads-up for the public release:** Amazon's reminder guidelines ask for the

@@ -155,10 +155,11 @@ These need a phone, and you set them up **when you create the reminder**:
 | **Be at a place** | Stand at the place and switch it on; name it and set a radius (25–500 m) | Be there and tap **I'm here, check in** |
 | **Walk steps** | Choose 20–2000 steps | Walk them. Counting starts when you open the challenge |
 | **Photo of the finished task** | Photograph what "done" looks like (the empty sink, the made bed) | Take a new photo (camera only, no gallery). The phone checks it shows the same things as the reference photo. Nothing is uploaded |
+| **Photo approved by someone** | Enter who approves (e.g. your wife) and optionally their mobile number | Take a photo. Your messaging app opens with a link ready to send. They tap **Approve** or **Not done** on a web page (no app needed). The alarm stops the moment they approve. Needs the [online setup](docs/ALEXA_SETUP.md#part-e-photo-approval) |
 
-The photo check is automatic and on-device, so it's good at "is this the
-sink?" but can be fooled by a clever cheater. A stricter option,
-where someone you choose approves the photo, is planned.
+The automatic photo check runs on the phone, so it's good at "is this the
+sink?" but can be fooled by a clever cheater. **Photo approved by someone**
+is the strict version: a real person checks.
 
 Then choose **All of these** (every proof must be passed) or **Any one**
 (passing one is enough).
@@ -275,7 +276,9 @@ known to trigger photosensitive seizures.
 Everything stays **on your device**: no account, no tracking. Reminders and
 settings are plain files in the app's data folder. Only if you **connect
 Alexa** are the titles and times of upcoming reminders sent to the server so
-your Echo can say them. See [PRIVACY.md](PRIVACY.md).
+your Echo can say them. Only if you use **Photo approved by someone** is that
+photo uploaded, and it's deleted as soon as it's approved or rejected. See
+[PRIVACY.md](PRIVACY.md).
 
 ## Roadmap
 
@@ -288,7 +291,7 @@ your Echo can say them. See [PRIVACY.md](PRIVACY.md).
 - [x] Android: vibration
 - [x] More proofs: barcode/QR, NFC tag, location, step count, on-device photo check
 - [x] PC: pause during Teams/Zoom/Discord calls (mic or camera in use)
-- [ ] Photo approval by a person you choose
+- [x] Photo approval by a person you choose (link texted to them, no app needed)
 - [ ] Sync reminders between phone and PC
 - [ ] iPhone (AlarmKit) and Mac
 - [x] Alexa: announce and repeat until done (needs [setup](docs/ALEXA_SETUP.md))
@@ -336,8 +339,8 @@ android/app/src/main/kotlin/...  native Android code:
                 AlarmService (rings in the background: sound, volume, calls),
                 AlarmStore (shared data), MainActivity (bridge to Dart, setup)
 alexa/          Alexa skill: voice model, Node.js code, icons
-supabase/       backend for Alexa: SQL + edge functions (alexa-code/-pair/-sync)
-docs/           setup guides
+supabase/       optional backend: SQL + edge functions for Alexa (alexa-*) and photo approval (approval*)
+docs/           setup guides; docs/approve/ is the photo-approval web page (GitHub Pages)
 tools/          sound and icon generators
 test/           tests
 ```
