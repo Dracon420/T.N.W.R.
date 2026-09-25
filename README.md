@@ -22,7 +22,7 @@ makes the next ring start louder.
   - [Choose how to prove it's done](#3-choose-how-to-prove-its-done)
   - [When the alarm goes off](#4-when-the-alarm-goes-off)
   - [Managing reminders](#5-managing-reminders)
-  - [Light and dark mode](#6-light-and-dark-mode)
+  - [Settings: theme and phone calls](#6-settings)
 - [Sound guide (including hard of hearing)](#sound-guide)
 - [Tips and troubleshooting](#tips-and-troubleshooting)
 - [Privacy](#privacy)
@@ -49,6 +49,9 @@ makes the next ring start louder.
 - 🔒 **Hard to escape (Windows)**: the alarm takes over the whole screen,
   stays on top, ignores the close button and Alt+F4, pulls itself back if you
   switch away, and can't be quit from the tray while ringing.
+- 📞 **Steps aside for calls (phones)**: during a phone call, video chat or
+  FaceTime-style call, a ringing alarm goes quiet. It comes back after the
+  call, at the same loudness it had before. The task still has to be proven.
 - 💾 **Survives restarts**: close or kill the app mid-alarm and it picks up
   right where it left off, louder, when it reopens.
 - 🌗 **Light, dark, or match-system theme.**
@@ -59,7 +62,7 @@ makes the next ring start louder.
 | Platform | Status |
 |---|---|
 | **Windows** | ✅ Working: everything in the feature list |
-| **Android** | 🟡 Works **while the app is open**. Ringing with the app closed is in progress. Volume ramps within the app, not the phone's system volume yet |
+| **Android** | 🟡 Works **while the app is open**, including pausing for calls. Ringing with the app closed is in progress. Volume ramps within the app, not the phone's system volume yet |
 | **iPhone** | 🔜 Planned (iOS 26+ alarms that ring through silent mode) |
 | **Mac** | 🔜 Planned |
 | **Alexa** | 🔜 Planned: your Echo announces the reminder and repeats it until the task is done |
@@ -142,6 +145,12 @@ steps, and a photo of the finished task approved by someone you choose.*
   tray menu.
 - If the app gets killed, the alarm resumes when T.N.W.R. is opened again, or
   at the next Windows sign-in.
+- **On a phone call or video chat?** (phones) The alarm goes quiet for the
+  whole call and shows **"Paused for your call"**. It comes back 30 seconds
+  after you hang up (adjustable in Settings), at the same loudness it had
+  before. The call time doesn't make it louder. An alarm that comes due during
+  a call waits for the call to end, then starts normally. You can still prove
+  the task during the pause to turn it off for good.
 
 **Repeating reminders** move to their next day automatically after you prove
 them done. **One-time reminders** move to the **Done** section.
@@ -158,10 +167,22 @@ them done. **One-time reminders** move to the **Done** section.
   Right-click it and choose **Quit** to exit completely (not possible while
   an alarm is ringing).
 
-### 6. Light and dark mode
+### 6. Settings
 
-Click the theme button in the top-right of the main screen and choose
-**Match system**, **Light**, or **Dark**. Your choice is remembered.
+Click the ⚙️ gear in the top-right of the main screen.
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Appearance** | System, Light, or Dark theme | System |
+| **Pause alarms during calls** | Silences a ringing alarm during phone calls, video chats and FaceTime-style calls (phones) | On |
+| **Resume after call** | How long after a call ends before the alarm comes back | 30 s (0–120 s) |
+
+**Which calls count (Android):** regular phone calls, an incoming call that's
+still ringing, and voice/video chats in apps like WhatsApp, Messenger, Google
+Meet and Zoom. Android puts the phone's audio into "call mode" for all of
+these. T.N.W.R. reads only that, so it needs no phone permission and never sees
+who you're talking to. On iPhone (coming), regular calls, FaceTime, and apps
+that use the iPhone's built-in call screen will count.
 
 ---
 
@@ -218,6 +239,7 @@ tracking. Reminders and settings are plain files in the app's data folder.
 - [x] Windows: escalating fullscreen alarm, tray, launch at sign-in
 - [x] Sound choices for every hearing level, screen flash, light/dark theme
 - [x] Math and typing proofs
+- [x] Pause for phone calls and video chats (Android, while the app is open)
 - [ ] Android: rings with the app closed, lock-screen alarm, system volume, vibration
 - [ ] More proofs: QR / NFC tag, location, step count, photo (on-device check + approval by a chosen person)
 - [ ] Sync reminders between phone and PC
@@ -256,12 +278,14 @@ It prints each file's loudness in dBFS; keep the tiers in
 
 ```
 lib/core/       models, escalation math, scheduling, local storage, settings, branding
-lib/alarm/      sound playback, system-volume control, the ringer
+lib/alarm/      sound playback, system-volume control, the ringer, call detection
 lib/proof/      proof challenges (math, typing; others to come)
 lib/desktop/    tray icon, fullscreen takeover, launch at sign-in
 lib/ui/         screens: reminder list, editor, alarm
 windows/runner/ native Windows code: system volume (Core Audio) and
                 looping sound playback (PlaySound) in flutter_window.cpp
+android/app/src/main/kotlin/.../MainActivity.kt
+                native Android code: call detection (audio mode)
 tools/          sound generator
 test/           tests
 ```
@@ -270,5 +294,8 @@ test/           tests
 *ringing* and are saved to disk right away, which is why a ringing alarm
 survives restarts. While something rings, `escalationAt()` works out the
 target volume and sound from how long it has been ringing, and the `Ringer`
-applies it. The app name lives in `lib/core/branding.dart`. The native
+applies it. Before ringing, it asks `CallDetector` whether a call is
+active. If so, it stays silent, and on resume it shifts the ringing start time
+by the length of the pause, so the call doesn't count toward escalation. The
+app name lives in `lib/core/branding.dart`. The native
 display names are set in each platform folder.

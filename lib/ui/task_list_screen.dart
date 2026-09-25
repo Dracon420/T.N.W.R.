@@ -6,6 +6,7 @@ import '../core/branding.dart';
 import '../core/settings.dart';
 import '../core/models.dart';
 import '../proof/proof.dart';
+import 'settings_screen.dart';
 import 'task_edit_screen.dart';
 
 class TaskListScreen extends StatelessWidget {
@@ -33,30 +34,11 @@ class TaskListScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          PopupMenuButton<ThemeMode>(
-            tooltip: 'Light or dark',
-            icon: Icon(switch (settings.themeMode) {
-              ThemeMode.light => Icons.light_mode,
-              ThemeMode.dark => Icons.dark_mode,
-              ThemeMode.system => Icons.brightness_auto,
-            }),
-            initialValue: settings.themeMode,
-            onSelected: settings.setThemeMode,
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                  value: ThemeMode.system,
-                  child: ListTile(
-                      leading: Icon(Icons.brightness_auto),
-                      title: Text('Match system'))),
-              PopupMenuItem(
-                  value: ThemeMode.light,
-                  child: ListTile(
-                      leading: Icon(Icons.light_mode), title: Text('Light'))),
-              PopupMenuItem(
-                  value: ThemeMode.dark,
-                  child: ListTile(
-                      leading: Icon(Icons.dark_mode), title: Text('Dark'))),
-            ],
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SettingsScreen(settings: settings))),
           ),
         ],
       ),

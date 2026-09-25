@@ -115,10 +115,21 @@ class _AlarmScreenState extends State<AlarmScreen> {
                   style: theme.textTheme.titleMedium?.copyWith(color: onColor)),
             ],
             const SizedBox(height: 16),
-            Text(
-              'Ringing for ${_fmt(elapsed)} · volume ${(volume * 100).round()}%',
-              style: theme.textTheme.bodyLarge?.copyWith(color: onColor),
-            ),
+            if (widget.controller.pausedForCall)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.phone_in_talk),
+                  title: const Text('Paused for your call'),
+                  subtitle: Text(
+                      'Comes back after the call ends. You can still prove it '
+                      'now to turn it off.'),
+                ),
+              )
+            else
+              Text(
+                'Ringing for ${_fmt(elapsed)} · volume ${(volume * 100).round()}%',
+                style: theme.textTheme.bodyLarge?.copyWith(color: onColor),
+              ),
             const SizedBox(height: 24),
             Text(
               task.proofMode == ProofMode.all || challenges.length == 1

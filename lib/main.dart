@@ -28,8 +28,9 @@ Future<void> main(List<String> args) async {
     await shell.init(startHidden: args.contains('--minimized'));
   }
 
-  final controller =
-      AppController(store, Ringer(SystemVolume()), surface: shell)..start();
+  final controller = AppController(store, Ringer(SystemVolume()),
+      settings: settings, surface: shell)
+    ..start();
   runApp(NagAlarmApp(controller: controller, settings: settings));
 }
 
