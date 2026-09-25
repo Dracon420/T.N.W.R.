@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.nagalarm.nag_alarm"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler needs 37 to compile against (doesn't change which phones can install it).
+    compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

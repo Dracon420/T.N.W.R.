@@ -80,6 +80,9 @@ class EscalationPolicy {
 
   /// Flash the alarm screen, for people who may not hear it at all.
   final bool flashScreen;
+
+  /// Vibrate while ringing (phones).
+  final bool vibrate;
   final int maxSnoozes;
   final int snoozeMinutes;
 
@@ -92,6 +95,7 @@ class EscalationPolicy {
     this.escalationSound = AlarmSound.siren,
     this.sirenAfterSeconds = 120,
     this.flashScreen = false,
+    this.vibrate = true,
     this.maxSnoozes = 1,
     this.snoozeMinutes = 5,
   });
@@ -105,6 +109,7 @@ class EscalationPolicy {
     AlarmSound? escalationSound,
     int? sirenAfterSeconds,
     bool? flashScreen,
+    bool? vibrate,
     int? maxSnoozes,
     int? snoozeMinutes,
   }) =>
@@ -117,6 +122,7 @@ class EscalationPolicy {
         escalationSound: escalationSound ?? this.escalationSound,
         sirenAfterSeconds: sirenAfterSeconds ?? this.sirenAfterSeconds,
         flashScreen: flashScreen ?? this.flashScreen,
+        vibrate: vibrate ?? this.vibrate,
         maxSnoozes: maxSnoozes ?? this.maxSnoozes,
         snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
       );
@@ -130,6 +136,7 @@ class EscalationPolicy {
         'escalationSound': escalationSound.name,
         'sirenAfterSeconds': sirenAfterSeconds,
         'flashScreen': flashScreen,
+        'vibrate': vibrate,
         'maxSnoozes': maxSnoozes,
         'snoozeMinutes': snoozeMinutes,
       };
@@ -147,6 +154,7 @@ class EscalationPolicy {
       escalationSound: sound('escalationSound', AlarmSound.siren),
       sirenAfterSeconds: j['sirenAfterSeconds'] as int,
       flashScreen: j['flashScreen'] as bool? ?? false,
+      vibrate: j['vibrate'] as bool? ?? true,
       maxSnoozes: j['maxSnoozes'] as int,
       snoozeMinutes: j['snoozeMinutes'] as int,
     );
@@ -166,8 +174,8 @@ sealed class ProofSpec {
         'math' => MathProof(
             problems: j['problems'] as int, difficulty: j['difficulty'] as int),
         'typing' => TypingProof(words: j['words'] as int),
-        'qr' => QrProof(code: j['code'] as String),
-        'nfc' => NfcProof(tagId: j['tagId'] as String),
+        'qr' => QrProof(code: j['code'] as String, label: j['label'] as String? ?? ''),
+        'nfc' => NfcProof(tagId: j['tagId'] as String, label: j['label'] as String? ?? ''),
         'location' => LocationProof(
             lat: (j['lat'] as num).toDouble(),
             lng: (j['lng'] as num).toDouble(),
@@ -176,6 +184,8 @@ sealed class ProofSpec {
         'steps' => StepsProof(steps: j['steps'] as int),
         'photo' => PhotoProof(
             referencePath: j['referencePath'] as String,
+            referenceLabels:
+                (j['referenceLabels'] as List? ?? const []).cast<String>(),
             threshold: (j['threshold'] as num).toDouble()),
         final t => throw FormatException('Unknown proof type: $t'),
       };
@@ -203,22 +213,28 @@ class TypingProof extends ProofSpec {
   Map<String, dynamic> get _fields => {'words': words};
 }
 
+/// Scan a specific barcode or QR code (anything printed: a medicine bottle,
+/// a sticker by the washer...).
 class QrProof extends ProofSpec {
   final String code;
-  const QrProof({required this.code});
+
+  /// Where the code is, shown on the alarm ("the medicine bottle").
+  final String label;
+  const QrProof({required this.code, this.label = ''});
   @override
   String get type => 'qr';
   @override
-  Map<String, dynamic> get _fields => {'code': code};
+  Map<String, dynamic> get _fields => {'code': code, 'label': label};
 }
 
 class NfcProof extends ProofSpec {
   final String tagId;
-  const NfcProof({required this.tagId});
+  final String label;
+  const NfcProof({required this.tagId, this.label = ''});
   @override
   String get type => 'nfc';
   @override
-  Map<String, dynamic> get _fields => {'tagId': tagId};
+  Map<String, dynamic> get _fields => {'tagId': tagId, 'label': label};
 }
 
 class LocationProof extends ProofSpec {
@@ -245,17 +261,28 @@ class StepsProof extends ProofSpec {
   Map<String, dynamic> get _fields => {'steps': steps};
 }
 
+/// Photograph the finished task. Checked on the device: the new photo must
+/// show enough of what the reference photo (taken at setup) showed.
 class PhotoProof extends ProofSpec {
   final String referencePath;
 
-  /// Similarity (0..1) the new photo must reach against the reference.
+  /// What on-device image labeling saw in the reference photo.
+  final List<String> referenceLabels;
+
+  /// Share (0..1) of the reference labels the new photo must also show.
   final double threshold;
-  const PhotoProof({required this.referencePath, this.threshold = 0.75});
+  const PhotoProof(
+      {required this.referencePath,
+      this.referenceLabels = const [],
+      this.threshold = 0.5});
   @override
   String get type => 'photo';
   @override
-  Map<String, dynamic> get _fields =>
-      {'referencePath': referencePath, 'threshold': threshold};
+  Map<String, dynamic> get _fields => {
+        'referencePath': referencePath,
+        'referenceLabels': referenceLabels,
+        'threshold': threshold,
+      };
 }
 
 /// Whether every proof is required, or any single one is enough.

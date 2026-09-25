@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import 'dart:io';
+
 import '../alarm/alarm_player.dart';
 import '../core/models.dart';
+import '../proof/location_challenge.dart';
+import '../proof/nfc_challenge.dart';
+import '../proof/photo_challenge.dart';
+import '../proof/scan_challenge.dart';
+import '../proof/steps_challenge.dart';
 
 /// Create or edit a reminder. Pops with the saved [NagTask], or null.
 class TaskEditScreen extends StatefulWidget {
@@ -28,6 +35,11 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   late MathProof? _math = _find<MathProof>() ??
       (widget.task == null ? const MathProof() : null);
   late TypingProof? _typing = _find<TypingProof>();
+  late QrProof? _qr = _find<QrProof>();
+  late NfcProof? _nfc = _find<NfcProof>();
+  late LocationProof? _location = _find<LocationProof>();
+  late StepsProof? _steps = _find<StepsProof>();
+  late PhotoProof? _photo = _find<PhotoProof>();
 
   T? _find<T extends ProofSpec>() =>
       widget.task?.proofs.whereType<T>().firstOrNull;
@@ -35,9 +47,11 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   List<ProofSpec> get _proofs => [
         ?_math,
         ?_typing,
-        // Kept as-is until their editors land in later phases.
-        ...?widget.task?.proofs
-            .where((p) => p is! MathProof && p is! TypingProof),
+        ?_qr,
+        ?_nfc,
+        ?_location,
+        ?_steps,
+        ?_photo,
       ];
 
   @override
@@ -187,6 +201,14 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
             onChanged: (on) =>
                 setState(() => _esc = _esc.copyWith(flashScreen: on)),
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Vibrate'),
+            subtitle: const Text('Phones: vibrates even in silent mode'),
+            value: _esc.vibrate,
+            onChanged: (on) =>
+                setState(() => _esc = _esc.copyWith(vibrate: on)),
+          ),
           _slider('Snoozes allowed', _esc.maxSnoozes.toDouble(), 0, 3,
               '${_esc.maxSnoozes}',
               (v) => _esc = _esc.copyWith(maxSnoozes: v.round()),
@@ -231,23 +253,131 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
                 '${_typing!.words}',
                 (v) => _typing = TypingProof(words: v.round()),
                 divisions: 17),
-          for (final label in const [
-            'Scan a QR code / NFC tag',
-            'Go to a place / walk steps',
-            'Photo of the finished task',
-          ])
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              enabled: false,
-              value: false,
-              onChanged: null,
-              title: Text(label),
-              subtitle: const Text('Coming in a later beta'),
-            ),
+          ..._phoneProofs(),
         ],
       ),
     );
   }
+
+  static const _phoneOnly = 'Set this up on your phone';
+
+  /// Proofs that need phone hardware; each is set up when switched on.
+  List<Widget> _phoneProofs() => [
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: hasCameraScanner,
+          title: const Text('Scan a barcode or QR code'),
+          subtitle: Text(!hasCameraScanner
+              ? _phoneOnly
+              : _qr == null
+                  ? 'Any code works: a medicine bottle, a sticker by the washer…'
+                  : 'Code saved.'),
+          value: _qr != null,
+          onChanged: (on) async {
+            if (on != true) return setState(() => _qr = null);
+            final code = await scanCode(context, title: 'Scan the code to use');
+            if (code != null) setState(() => _qr = QrProof(code: code));
+          },
+        ),
+        if (_qr case final qr?)
+          _labelField('Where is it? (e.g. medicine bottle)', qr.label,
+              (v) => _qr = QrProof(code: qr.code, label: v)),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: hasNfcReader,
+          title: const Text('Tap an NFC tag'),
+          subtitle: Text(!hasNfcReader
+              ? 'Set this up on an Android phone'
+              : _nfc == null
+                  ? 'Stick a cheap NFC tag where the task is done'
+                  : 'Tag saved.'),
+          value: _nfc != null,
+          onChanged: (on) async {
+            if (on != true) return setState(() => _nfc = null);
+            final id = await readNfcTag(context);
+            if (id != null) setState(() => _nfc = NfcProof(tagId: id));
+          },
+        ),
+        if (_nfc case final nfc?)
+          _labelField('Where is it? (e.g. front door)', nfc.label,
+              (v) => _nfc = NfcProof(tagId: nfc.tagId, label: v)),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: hasGps,
+          title: const Text('Be at a place'),
+          subtitle: Text(!hasGps
+              ? _phoneOnly
+              : _location == null
+                  ? 'Saves where you are right now. Set it up at the place.'
+                  : 'Place saved.'),
+          value: _location != null,
+          onChanged: (on) async {
+            if (on != true) return setState(() => _location = null);
+            final messenger = ScaffoldMessenger.of(context);
+            try {
+              final here = await currentPosition();
+              setState(() => _location = LocationProof(
+                  lat: here.latitude, lng: here.longitude, label: 'the spot'));
+            } catch (e) {
+              messenger.showSnackBar(SnackBar(content: Text('$e')));
+            }
+          },
+        ),
+        if (_location case final loc?) ...[
+          _labelField('Name of the place (e.g. the gym)', loc.label,
+              (v) => _location = LocationProof(
+                  lat: loc.lat, lng: loc.lng, radiusMeters: loc.radiusMeters, label: v)),
+          _slider('Within', loc.radiusMeters, 25, 500, '${loc.radiusMeters.round()} m',
+              (v) => _location = LocationProof(
+                  lat: loc.lat, lng: loc.lng, radiusMeters: v, label: loc.label),
+              divisions: 19),
+        ],
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: hasStepCounter,
+          title: const Text('Walk a number of steps'),
+          subtitle: hasStepCounter ? null : const Text(_phoneOnly),
+          value: _steps != null,
+          onChanged: (on) =>
+              setState(() => _steps = on == true ? const StepsProof() : null),
+        ),
+        if (_steps case final steps?)
+          _slider('Steps', steps.steps.toDouble(), 20, 2000, '${steps.steps}',
+              (v) => _steps = StepsProof(steps: (v / 20).round() * 20),
+              divisions: 99),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: hasPhotoCheck,
+          title: const Text('Photo of the finished task'),
+          subtitle: Text(!hasPhotoCheck
+              ? _phoneOnly
+              : _photo == null
+                  ? 'Take a photo of what "done" looks like. Checked on the phone, nothing is uploaded.'
+                  : 'Looking for: ${_photo!.referenceLabels.take(5).join(', ')}'),
+          value: _photo != null,
+          secondary: _photo == null
+              ? null
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.file(File(_photo!.referencePath),
+                      width: 48, height: 48, fit: BoxFit.cover)),
+          onChanged: (on) async {
+            if (on != true) return setState(() => _photo = null);
+            final photo = await takeReferencePhoto(context);
+            if (photo != null) setState(() => _photo = photo);
+          },
+        ),
+      ];
+
+  Widget _labelField(String hint, String value, void Function(String) apply) =>
+      Padding(
+        padding: const EdgeInsets.only(left: 16, bottom: 8),
+        child: TextFormField(
+          initialValue: value == 'the spot' ? '' : value,
+          decoration: InputDecoration(labelText: hint, isDense: true),
+          onChanged: (v) => apply(v.trim().isEmpty ? '' : v.trim()),
+        ),
+      );
 
   Widget _soundPicker(
       String label, AlarmSound value, void Function(AlarmSound) apply) {

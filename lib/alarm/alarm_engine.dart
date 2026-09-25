@@ -96,6 +96,7 @@ class AndroidAlarmEngine implements AlarmEngine {
           'sound': t.escalation.sound.file,
           'escalationSound': t.escalation.escalationSound.file,
           'sirenAfterSeconds': t.escalation.sirenAfterSeconds,
+          'vibrate': t.escalation.vibrate,
         },
       };
 }

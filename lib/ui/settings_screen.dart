@@ -74,14 +74,16 @@ class SettingsScreen extends StatelessWidget {
               selected: {settings.themeMode},
               onSelectionChanged: (s) => settings.setThemeMode(s.first),
             ),
-            section('Phone calls'),
+            section('Calls'),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Pause alarms during calls'),
               subtitle: const Text(
-                  'Phone calls, video chats and FaceTime-style calls. The alarm '
-                  'goes quiet during the call and comes back afterwards at the '
-                  'same loudness. The task still has to be proven.'),
+                  'Phone calls, video chats and FaceTime-style calls. On a PC: '
+                  'whenever an app is using the microphone or camera (Teams, '
+                  'Zoom, Discord...). The alarm goes quiet during the call and '
+                  'comes back afterwards at the same loudness. The task still '
+                  'has to be proven.'),
               value: settings.pauseDuringCalls,
               onChanged: settings.setPauseDuringCalls,
             ),

@@ -44,15 +44,19 @@ makes the next ring start louder.
   **low-pitched sounds for people who are hard of hearing**.
 - 🔁 **Escalation sound**: switches to a harsher sound if you ignore it too long.
 - 💡 **Screen flash**: an optional visual alarm.
-- 🧠 **Proof it's done**: solve math problems or type a random phrase before it
-  turns off. Require all proofs, or any one of them.
+- 🧠 **Proof it's done**: math problems, typing a random phrase, and on phones:
+  scanning a barcode/QR code, tapping an NFC tag, being at a place, walking a
+  number of steps, or a photo of the finished task (checked on the phone).
+  Require all proofs, or any one of them.
 - 😴 **Limited snoozes**: 0–3 per reminder. Each snooze makes the next ring
   start louder.
 - 🔒 **Hard to escape (Windows)**: the alarm takes over the whole screen,
   stays on top, ignores the close button and Alt+F4, pulls itself back if you
   switch away, and can't be quit from the tray while ringing.
-- 📞 **Steps aside for calls (phones)**: during a phone call, video chat or
-  FaceTime-style call, a ringing alarm goes quiet. It comes back after the
+- 📳 **Vibrates** on phones, even in silent mode (can be turned off per reminder).
+- 📞 **Steps aside for calls**: during a phone call, video chat or
+  FaceTime-style call (or, on a PC, while any app uses the microphone or camera),
+  a ringing alarm goes quiet. It comes back after the
   call, at the same loudness it had before. The task still has to be proven.
 - 🔊 **Alexa**: link an Echo with a 6-digit code. It announces each reminder and keeps repeating it until you prove the task is done in the app.
 - 💾 **Survives restarts**: close or kill the app mid-alarm and it picks up
@@ -128,6 +132,7 @@ phone, and show over the lock screen.
 | **Escalation sound** | The sound it switches to if you keep ignoring it | Six sounds (Siren) |
 | **Switch after** | How long before it changes to the escalation sound | Immediately–10 min (2 min) |
 | **Flash the screen** | Makes the alarm screen flash, for when sound might not be heard | Off |
+| **Vibrate** | Phones: vibrates while ringing, even in silent mode | On |
 | **Snoozes allowed** | How many times you can put it off for 5 minutes | 0–3 (1) |
 
 See the [Sound guide](#sound-guide) to pick the right sounds.
@@ -140,6 +145,20 @@ Pick at least one:
   A wrong answer **resets your count to zero**.
 - **Type a random phrase**: 3–20 random words. The phrase can't be copied,
   so you have to type it. Capital letters and extra spaces don't matter.
+
+These need a phone, and you set them up **when you create the reminder**:
+
+| Proof | Setup | To turn the alarm off |
+|---|---|---|
+| **Scan a barcode or QR code** | Scan any code where the task happens: the barcode on your medicine bottle, a sticker by the washer | Go there and scan that same code |
+| **Tap an NFC tag** (Android) | Tap a cheap NFC sticker placed where the task is done | Go there and tap the phone on it |
+| **Be at a place** | Stand at the place and switch it on; name it and set a radius (25–500 m) | Be there and tap **I'm here, check in** |
+| **Walk steps** | Choose 20–2000 steps | Walk them. Counting starts when you open the challenge |
+| **Photo of the finished task** | Photograph what "done" looks like (the empty sink, the made bed) | Take a new photo (camera only, no gallery). The phone checks it shows the same things as the reference photo. Nothing is uploaded |
+
+The photo check is automatic and on-device, so it's good at "is this the
+sink?" but can be fooled by a clever cheater. A stricter option,
+where someone you choose approves the photo, is planned.
 
 Then choose **All of these** (every proof must be passed) or **Any one**
 (passing one is enough).
@@ -197,7 +216,7 @@ Click the ⚙️ gear in the top-right of the main screen.
 |---|---|---|
 | **Connect Alexa** | Link an Echo: **Get code**, then say *"Alexa, ask naggy wife to link code …"* ([setup guide](docs/ALEXA_SETUP.md)) | Not connected |
 | **Appearance** | System, Light, or Dark theme | System |
-| **Pause alarms during calls** | Silences a ringing alarm during phone calls, video chats and FaceTime-style calls (phones) | On |
+| **Pause alarms during calls** | Silences a ringing alarm during phone calls, video chats and FaceTime-style calls. On a PC: whenever an app uses the microphone or camera (Teams, Zoom, Discord…) | On |
 | **Resume after call** | How long after a call ends before the alarm comes back | 30 s (0–120 s) |
 
 **Which calls count (Android):** regular phone calls, an incoming call that's
@@ -266,8 +285,10 @@ your Echo can say them. See [PRIVACY.md](PRIVACY.md).
 - [x] Pause for phone calls and video chats (Android, while the app is open)
 - [x] Android: rings through silent mode, controls the alarm volume
 - [x] Android: rings with the app closed, over the lock screen, survives reboots
-- [ ] Android: vibration
-- [ ] More proofs: QR / NFC tag, location, step count, photo (on-device check + approval by a chosen person)
+- [x] Android: vibration
+- [x] More proofs: barcode/QR, NFC tag, location, step count, on-device photo check
+- [x] PC: pause during Teams/Zoom/Discord calls (mic or camera in use)
+- [ ] Photo approval by a person you choose
 - [ ] Sync reminders between phone and PC
 - [ ] iPhone (AlarmKit) and Mac
 - [x] Alexa: announce and repeat until done (needs [setup](docs/ALEXA_SETUP.md))
@@ -305,7 +326,7 @@ It prints each file's loudness in dBFS; keep the tiers in
 ```
 lib/core/       models, escalation math, scheduling, local storage, settings, branding
 lib/alarm/      sound playback, system-volume control, the ringer, call detection
-lib/proof/      proof challenges (math, typing; others to come)
+lib/proof/      proof challenges: math, typing, scan, NFC, location, steps, photo
 lib/desktop/    tray icon, fullscreen takeover, launch at sign-in
 lib/ui/         screens: reminder list, editor, alarm
 windows/runner/ native Windows code: system volume (Core Audio) and

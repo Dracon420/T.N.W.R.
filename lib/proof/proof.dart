@@ -1,7 +1,12 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/models.dart';
+import 'location_challenge.dart';
 import 'math_challenge.dart';
+import 'nfc_challenge.dart';
+import 'photo_challenge.dart';
+import 'scan_challenge.dart';
+import 'steps_challenge.dart';
 import 'typing_challenge.dart';
 
 /// Runs one [ProofSpec] on this device. A challenge widget calls [onPassed]
@@ -23,31 +28,12 @@ abstract class ProofChallenge {
 ProofChallenge challengeFor(ProofSpec spec) => switch (spec) {
       MathProof() => MathChallenge(spec),
       TypingProof() => TypingChallenge(spec),
-      QrProof() => const _NotYet('Scan QR code', 'Scan the tag you set up'),
-      NfcProof() => const _NotYet('Tap NFC tag', 'Tap your phone on the tag'),
-      LocationProof(:final label) =>
-        _NotYet('Go to $label', 'Be at $label with your phone'),
-      StepsProof(:final steps) =>
-        _NotYet('Walk $steps steps', 'Walk with your phone in your pocket'),
-      PhotoProof() =>
-        const _NotYet('Take a photo', 'Photograph the finished task'),
+      QrProof() => ScanChallenge(spec),
+      NfcProof() => NfcChallenge(spec),
+      LocationProof() => LocationChallenge(spec),
+      StepsProof() => StepsChallenge(spec),
+      PhotoProof() => PhotoChallenge(spec),
     };
 
 /// Human-readable label for the editor's proof picker.
 String proofLabel(ProofSpec spec) => challengeFor(spec).title;
-
-/// Placeholder for proof types that land in later build phases.
-class _NotYet extends ProofChallenge {
-  const _NotYet(this.title, this.description);
-
-  @override
-  final String title;
-  @override
-  final String description;
-  @override
-  bool get isSupportedHere => false;
-  @override
-  String get unsupportedHint => 'Not available in this beta build yet.';
-  @override
-  Widget build(VoidCallback onPassed) => const SizedBox.shrink();
-}

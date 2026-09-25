@@ -17,6 +17,10 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import org.json.JSONObject
 import java.io.File
@@ -79,6 +83,14 @@ class AlarmService : Service() {
     private var pausedAt = 0L
     private var callEndedAt: Long? = null
     private var alertShown = false
+    private var vibrating = false
+    private val vibrator: Vibrator by lazy {
+        if (Build.VERSION.SDK_INT >= 31) {
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION") getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+    }
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -137,6 +149,7 @@ class AlarmService : Service() {
                 pausedForCall = true
                 pausedAt = now
                 stopSound()
+                stopVibration()
                 restoreVolume()
                 // Never pop the full-screen alarm over a call.
                 notifications.cancel(ALERT_ID)
@@ -174,6 +187,30 @@ class AlarmService : Service() {
         }
         if (file != playingFile) play(file)
         applyVolume(volume)
+        if (esc.optBoolean("vibrate", true)) startVibration() else stopVibration()
+    }
+
+    /** Buzz 0.8 s, pause 0.6 s, repeat. Alarm usage, so silent mode doesn't stop it. */
+    private fun startVibration() {
+        if (vibrating || !vibrator.hasVibrator()) return
+        vibrating = true
+        val pattern = longArrayOf(0, 800, 600)
+        if (Build.VERSION.SDK_INT < 26) {
+            @Suppress("DEPRECATION") vibrator.vibrate(pattern, 0)
+            return
+        }
+        val effect = VibrationEffect.createWaveform(pattern, 0)
+        when {
+            Build.VERSION.SDK_INT >= 33 -> vibrator.vibrate(effect,
+                VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM))
+            else -> @Suppress("DEPRECATION") vibrator.vibrate(effect,
+                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build())
+        }
+    }
+
+    private fun stopVibration() {
+        if (vibrating) vibrator.cancel()
+        vibrating = false
     }
 
     /**
@@ -254,6 +291,7 @@ class AlarmService : Service() {
         pausedForCall = false
         handler.removeCallbacks(ticker)
         stopSound()
+        stopVibration()
         restoreVolume()
         notifications.cancel(ALERT_ID)
         wakeLock?.takeIf { it.isHeld }?.release()
