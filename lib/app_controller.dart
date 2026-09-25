@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'alarm/alarm_engine.dart';
 import 'alarm/call_detector.dart';
 import 'alarm/ringer.dart';
 import 'core/escalation.dart';
@@ -23,21 +24,30 @@ abstract class AlarmSurface {
 ///
 /// While the user is on a call or video chat, a ringing alarm goes silent and
 /// comes back after the call, at the same loudness it had before.
+///
+/// With an [AlarmEngine] that owns ringing (Android), the OS engine plays the
+/// sound, escalates and handles calls, so alarms ring with the app closed;
+/// this class keeps the engine's schedule in sync and tells it when to stop.
 class AppController extends ChangeNotifier {
   AppController(
     this.store,
     this.ringer, {
     required this.settings,
     this.surface,
+    this.engine,
     CallDetector? calls,
     DateTime Function()? clock,
   })  : _calls = calls ?? CallDetector(),
-        _now = clock ?? DateTime.now;
+        _now = clock ?? DateTime.now {
+    store.addListener(_scheduleSync);
+    settings.addListener(_scheduleSync);
+  }
 
   final TaskStore store;
   final Ringer ringer;
   final AppSettings settings;
   final AlarmSurface? surface;
+  final AlarmEngine? engine;
   final CallDetector _calls;
   final DateTime Function() _now;
 
@@ -49,7 +59,14 @@ class AppController extends ChangeNotifier {
   DateTime? _pausedAt;
   DateTime? _callEndedAt;
 
-  bool get pausedForCall => _pausedAt != null;
+  /// Set from the engine when it owns ringing.
+  bool _enginePausedForCall = false;
+  Timer? _syncTimer;
+
+  bool get _engineRings => engine?.ownsRinging ?? false;
+
+  bool get pausedForCall =>
+      _engineRings ? _enginePausedForCall : _pausedAt != null;
 
   NagTask? get ringingTask {
     final ringing =
@@ -61,6 +78,21 @@ class AppController extends ChangeNotifier {
   void start() {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => tick());
     tick();
+    syncEngine();
+  }
+
+  /// Batches bursts of changes into one engine sync.
+  void _scheduleSync() {
+    if (engine == null) return;
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(milliseconds: 300), syncEngine);
+  }
+
+  @visibleForTesting
+  Future<void> syncEngine() async {
+    await engine?.sync(
+        store.tasks.where((t) => t.status == TaskStatus.scheduled).toList(),
+        settings);
   }
 
   @visibleForTesting
@@ -80,6 +112,17 @@ class AppController extends ChangeNotifier {
       if (ringing == null) {
         _pausedAt = _callEndedAt = null;
         if (ringer.isRinging) await _silence();
+        return;
+      }
+
+      if (_engineRings) {
+        await engine!.ring(ringing);
+        _enginePausedForCall = await engine!.isPausedForCall();
+        // Only for display; the engine computes the real volume itself.
+        current = escalationAt(
+            ringing.escalation, now.difference(ringing.ringingSince!),
+            snoozesUsed: ringing.snoozesUsed);
+        notifyListeners();
         return;
       }
 
@@ -138,6 +181,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> snooze(NagTask t) async {
     if (!canSnooze(t)) return;
+    await engine?.stop(t.id);
     await store.upsert(t.copyWith(
       status: TaskStatus.scheduled,
       dueAt: _now().add(Duration(minutes: t.escalation.snoozeMinutes)),
@@ -149,6 +193,7 @@ class AppController extends ChangeNotifier {
 
   /// Called once the task's proofs are satisfied.
   Future<void> complete(NagTask t) async {
+    await engine?.stop(t.id);
     final now = _now();
     final next = nextOccurrence(t.repeat, t.dueAt, now);
     await store.upsert(t.copyWith(
@@ -171,6 +216,9 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _ticker?.cancel();
+    _syncTimer?.cancel();
+    store.removeListener(_scheduleSync);
+    settings.removeListener(_scheduleSync);
     super.dispose();
   }
 }

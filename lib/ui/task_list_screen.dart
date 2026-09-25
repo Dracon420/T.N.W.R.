@@ -6,6 +6,8 @@ import '../core/branding.dart';
 import '../core/settings.dart';
 import '../core/models.dart';
 import '../proof/proof.dart';
+import '../alarm/alarm_engine.dart';
+import 'phone_setup.dart';
 import 'settings_screen.dart';
 import 'task_edit_screen.dart';
 
@@ -38,7 +40,8 @@ class TaskListScreen extends StatelessWidget {
             tooltip: 'Settings',
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => SettingsScreen(settings: settings))),
+                builder: (_) => SettingsScreen(
+                    settings: settings, engine: controller.engine))),
           ),
         ],
       ),
@@ -55,19 +58,29 @@ class TaskListScreen extends StatelessWidget {
               tasks.where((t) => t.status != TaskStatus.done).toList();
           final done = tasks.where((t) => t.status == TaskStatus.done).toList();
           if (tasks.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'No reminders yet.\nAdd one, and it will nag you until you prove it\'s done.',
-                  textAlign: TextAlign.center,
+            return Column(
+              children: [
+                if (controller.engine case final AndroidAlarmEngine engine)
+                  PhoneSetupBanner(engine: engine),
+                const Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Text(
+                        'No reminders yet.\nAdd one, and it will nag you until you prove it\'s done.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             );
           }
           return ListView(
             padding: const EdgeInsets.only(bottom: 96),
             children: [
+              if (controller.engine case final AndroidAlarmEngine engine)
+                PhoneSetupBanner(engine: engine),
               for (final t in active) _tile(context, t),
               if (done.isNotEmpty) ...[
                 const Padding(

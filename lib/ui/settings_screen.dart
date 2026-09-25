@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../alarm/alarm_engine.dart';
 import '../core/settings.dart';
+import 'phone_setup.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.settings});
+  const SettingsScreen({super.key, required this.settings, this.engine});
 
   final AppSettings settings;
+  final AlarmEngine? engine;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +25,19 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (engine case final AndroidAlarmEngine engine) ...[
+              section('Background alarms'),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.phonelink_setup),
+                title: const Text('Phone setup'),
+                subtitle: const Text(
+                    'Permissions needed for alarms to ring when the app is closed'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PhoneSetupScreen(engine: engine))),
+              ),
+            ],
             section('Appearance'),
             SegmentedButton<ThemeMode>(
               segments: const [

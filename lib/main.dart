@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'alarm/alarm_engine.dart';
 import 'alarm/ringer.dart';
 import 'alarm/system_volume.dart';
 import 'app_controller.dart';
@@ -29,7 +30,9 @@ Future<void> main(List<String> args) async {
   }
 
   final controller = AppController(store, Ringer(SystemVolume()),
-      settings: settings, surface: shell)
+      settings: settings,
+      surface: shell,
+      engine: Platform.isAndroid ? AndroidAlarmEngine() : null)
     ..start();
   runApp(NagAlarmApp(controller: controller, settings: settings));
 }

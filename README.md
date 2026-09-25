@@ -7,7 +7,7 @@ T.N.W.R. rings at the time you set, then gets **louder and louder** until you
 passing the proof challenge or using one of a few snoozes, and every snooze
 makes the next ring start louder.
 
-> **Beta.** Windows is the most complete version. See [Platform status](#platform-status).
+> **Beta.** Windows and Android are working. See [Platform status](#platform-status).
 
 ---
 
@@ -64,7 +64,7 @@ makes the next ring start louder.
 | Platform | Status |
 |---|---|
 | **Windows** | ✅ Working: everything in the feature list |
-| **Android** | 🟡 Works **while the app is open**: rings through silent/vibrate mode, controls the phone's alarm volume, pauses for calls. Ringing with the app closed is in progress |
+| **Android** | ✅ Working: rings on time **even when the app is closed or the phone is locked**, shows over the lock screen, rings through silent/vibrate mode, controls the alarm volume, pauses for calls, survives reboots. Needs a one-time [phone setup](#android) |
 | **iPhone** | 🔜 Planned (iOS 26+ alarms that ring through silent mode) |
 | **Mac** | 🔜 Planned |
 | **Alexa** | 🔜 Planned: your Echo announces the reminder and repeats it until the task is done |
@@ -87,7 +87,21 @@ build it from source (see [For developers](#for-developers)) and run
 
 Beta testers get an `.apk` file. On the phone, open it and allow
 **Install unknown apps** for whichever app you opened it from (Files, Chrome, …).
-For now, **keep T.N.W.R. open** for alarms to ring (see Platform status).
+
+**One-time phone setup (important).** Android asks you to allow a few things
+before an app may ring while it's closed. Open T.N.W.R. and tap the red
+**Finish phone setup** banner (or **⚙️ Settings → Phone setup**), then tap
+**Fix** on each item until all four have green checks:
+
+| Item | Why |
+|---|---|
+| **Allow notifications** | The alarm appears as a notification and opens over the lock screen |
+| **Allow full-screen alarms** | Lets the alarm fill the screen like an incoming call |
+| **Allow alarms & reminders** | Rings at the exact time you set |
+| **Set battery to Unrestricted** | Stops the phone (Samsung especially) from putting T.N.W.R. to sleep and skipping alarms |
+
+After that you can close the app. Alarms still ring on time, wake the
+phone, and show over the lock screen.
 
 ---
 
@@ -146,7 +160,12 @@ steps, and a photo of the finished task approved by someone you choose.*
   down or muting (it turns it back up within a second), and **Quit** in the
   tray menu.
 - If the app gets killed, the alarm resumes when T.N.W.R. is opened again, or
-  at the next Windows sign-in.
+  at the next Windows sign-in. On Android the alarm runs in the background, so
+  closing the app, swiping it away or restarting the phone doesn't stop it.
+- **On Android** the alarm wakes the phone and appears **over the lock screen**.
+  You can solve the proof right there without unlocking. A notification
+  ("Ringing until you prove it's done") stays up while it rings; tapping it
+  opens the alarm.
 - **On a phone call or video chat?** (phones) The alarm goes quiet for the
   whole call and shows **"Paused for your call"**. It comes back 30 seconds
   after you hang up (adjustable in Settings), at the same loudness it had
@@ -226,7 +245,7 @@ known to trigger photosensitive seizures.
 | **"Windows protected your PC"** | Click **More info → Run anyway**. The beta isn't code-signed yet. |
 | **No sound on Windows** | Check that a speaker or headphones is the default playback device. T.N.W.R. unmutes and raises the default device only. |
 | **Alarm didn't ring after a reboot** | Launch-at-sign-in only turns on after running a **release** build once. Open T.N.W.R. manually once. |
-| **Alarm didn't ring on Android** | For now the app must be open (see Platform status). If Do Not Disturb is on, make sure **Alarms** are allowed in its settings (they are by default). |
+| **Alarm didn't ring on Android** | Open **⚙️ Settings → Phone setup** and make sure all four items are green. If Do Not Disturb is on, make sure **Alarms** are allowed in its settings (they are by default). |
 | **Want to start fresh** | Quit T.N.W.R. and delete `%APPDATA%\com.nagalarm\T.N.W.R\` (holds `tasks.json` and `settings.json`). |
 | **Two copies running** | Only run one copy at a time for now. A duplicate would ring twice. |
 
@@ -243,7 +262,8 @@ tracking. Reminders and settings are plain files in the app's data folder.
 - [x] Math and typing proofs
 - [x] Pause for phone calls and video chats (Android, while the app is open)
 - [x] Android: rings through silent mode, controls the alarm volume
-- [ ] Android: rings with the app closed, lock-screen alarm, vibration
+- [x] Android: rings with the app closed, over the lock screen, survives reboots
+- [ ] Android: vibration
 - [ ] More proofs: QR / NFC tag, location, step count, photo (on-device check + approval by a chosen person)
 - [ ] Sync reminders between phone and PC
 - [ ] iPhone (AlarmKit) and Mac
@@ -287,8 +307,10 @@ lib/desktop/    tray icon, fullscreen takeover, launch at sign-in
 lib/ui/         screens: reminder list, editor, alarm
 windows/runner/ native Windows code: system volume (Core Audio) and
                 looping sound playback (PlaySound) in flutter_window.cpp
-android/app/src/main/kotlin/.../MainActivity.kt
-                native Android code: call detection (audio mode)
+android/app/src/main/kotlin/...  native Android code:
+                AlarmScheduler (alarm-clock alarms), AlarmReceiver (fire, reboot),
+                AlarmService (rings in the background: sound, volume, calls),
+                AlarmStore (shared data), MainActivity (bridge to Dart, setup)
 tools/          sound generator
 test/           tests
 ```
@@ -299,6 +321,10 @@ survives restarts. While something rings, `escalationAt()` works out the
 target volume and sound from how long it has been ringing, and the `Ringer`
 applies it. Before ringing, it asks `CallDetector` whether a call is
 active. If so, it stays silent, and on resume it shifts the ringing start time
-by the length of the pause, so the call doesn't count toward escalation. The
+by the length of the pause, so the call doesn't count toward escalation. On Android, an `AlarmEngine` owns ringing instead: the app sends the list
+of upcoming reminders to `AlarmScheduler` whenever it changes, and the
+native `AlarmService` does the ringing, escalation and call pausing (the
+same rules as the Dart code), so it works with the app closed. The app tells
+it to stop once a proof passes. The
 app name lives in `lib/core/branding.dart`. The native
 display names are set in each platform folder.
