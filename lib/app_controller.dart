@@ -118,7 +118,7 @@ class AppController extends ChangeNotifier {
       final now = _now();
       for (final t in store.tasks) {
         if (t.status == TaskStatus.scheduled && !t.dueAt.isAfter(now)) {
-          await store.upsert(t.copyWith(
+          await store.upsert(_freshRing(t).copyWith(
               status: TaskStatus.ringing, ringingSince: () => now));
         }
       }
@@ -244,12 +244,38 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears the proofs and approval of a previous ring.
+  NagTask _freshRing(NagTask t) => t.copyWith(
+        passedProofs: const [],
+        pendingApprovalId: () => null,
+        pendingApprovalUrl: () => null,
+      );
+
+  /// Saves that proof [index] of [t] passed, so it survives the app being
+  /// closed, and completes the task once enough proofs have passed.
+  Future<void> proofPassed(NagTask t, int index) async {
+    final live = store.byId(t.id) ?? t;
+    final passed = ({...live.passedProofs, index}.toList()..sort());
+    final updated = live.copyWith(passedProofs: passed);
+    await store.upsert(updated);
+    if (proofSatisfied(live.proofMode, live.proofs.length, passed.length)) {
+      await complete(updated);
+    }
+  }
+
+  /// Remembers (or with nulls, forgets) the photo approval being waited on.
+  Future<void> savePendingApproval(NagTask t, String? id, String? url) async {
+    final live = store.byId(t.id) ?? t;
+    await store.upsert(live.copyWith(
+        pendingApprovalId: () => id, pendingApprovalUrl: () => url));
+  }
+
   bool canSnooze(NagTask t) => t.snoozesUsed < t.escalation.maxSnoozes;
 
   Future<void> snooze(NagTask t) async {
     if (!canSnooze(t)) return;
     await engine?.stop(t.id);
-    await store.upsert(t.copyWith(
+    await store.upsert(_freshRing(t).copyWith(
       status: TaskStatus.scheduled,
       dueAt: _now().add(Duration(minutes: t.escalation.snoozeMinutes)),
       ringingSince: () => null,
@@ -263,7 +289,7 @@ class AppController extends ChangeNotifier {
     await engine?.stop(t.id);
     final now = _now();
     final next = nextOccurrence(t.repeat, t.dueAt, now);
-    await store.upsert(t.copyWith(
+    await store.upsert(_freshRing(t).copyWith(
       status: next == null ? TaskStatus.done : TaskStatus.scheduled,
       dueAt: next,
       ringingSince: () => null,
@@ -274,7 +300,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Makes a task ring a few seconds from now, for trying out its settings.
-  Future<void> testRing(NagTask t) => store.upsert(t.copyWith(
+  Future<void> testRing(NagTask t) => store.upsert(_freshRing(t).copyWith(
         status: TaskStatus.scheduled,
         dueAt: _now().add(const Duration(seconds: 5)),
         ringingSince: () => null,

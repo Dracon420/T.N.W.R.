@@ -330,6 +330,15 @@ class NagTask {
   /// When the current ringing started; null unless [status] is ringing.
   final DateTime? ringingSince;
   final int snoozesUsed;
+
+  /// Indexes into [proofs] already passed during the current ring. Saved so a
+  /// passed proof isn't lost if Android closes the app (e.g. while the camera
+  /// or messaging app is open).
+  final List<int> passedProofs;
+
+  /// A photo approval sent and awaiting a verdict during the current ring.
+  final String? pendingApprovalId;
+  final String? pendingApprovalUrl;
   final DateTime? completedAt;
   final DateTime updatedAt;
 
@@ -345,6 +354,9 @@ class NagTask {
     this.status = TaskStatus.scheduled,
     this.ringingSince,
     this.snoozesUsed = 0,
+    this.passedProofs = const [],
+    this.pendingApprovalId,
+    this.pendingApprovalUrl,
     this.completedAt,
     required this.updatedAt,
   });
@@ -360,6 +372,9 @@ class NagTask {
     TaskStatus? status,
     DateTime? Function()? ringingSince,
     int? snoozesUsed,
+    List<int>? passedProofs,
+    String? Function()? pendingApprovalId,
+    String? Function()? pendingApprovalUrl,
     DateTime? Function()? completedAt,
     DateTime? updatedAt,
   }) =>
@@ -375,6 +390,13 @@ class NagTask {
         status: status ?? this.status,
         ringingSince: ringingSince != null ? ringingSince() : this.ringingSince,
         snoozesUsed: snoozesUsed ?? this.snoozesUsed,
+        passedProofs: passedProofs ?? this.passedProofs,
+        pendingApprovalId: pendingApprovalId != null
+            ? pendingApprovalId()
+            : this.pendingApprovalId,
+        pendingApprovalUrl: pendingApprovalUrl != null
+            ? pendingApprovalUrl()
+            : this.pendingApprovalUrl,
         completedAt: completedAt != null ? completedAt() : this.completedAt,
         updatedAt: updatedAt ?? DateTime.now(),
       );
@@ -391,6 +413,9 @@ class NagTask {
         'status': status.name,
         'ringingSince': ringingSince?.toUtc().toIso8601String(),
         'snoozesUsed': snoozesUsed,
+        'passedProofs': passedProofs,
+        'pendingApprovalId': pendingApprovalId,
+        'pendingApprovalUrl': pendingApprovalUrl,
         'completedAt': completedAt?.toUtc().toIso8601String(),
         'updatedAt': updatedAt.toUtc().toIso8601String(),
       };
@@ -414,6 +439,9 @@ class NagTask {
       status: TaskStatus.values.byName(j['status'] as String),
       ringingSince: date('ringingSince'),
       snoozesUsed: j['snoozesUsed'] as int? ?? 0,
+      passedProofs: (j['passedProofs'] as List? ?? const []).cast<int>(),
+      pendingApprovalId: j['pendingApprovalId'] as String?,
+      pendingApprovalUrl: j['pendingApprovalUrl'] as String?,
       completedAt: date('completedAt'),
       updatedAt: date('updatedAt')!,
     );

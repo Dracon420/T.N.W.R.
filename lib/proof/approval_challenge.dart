@@ -75,7 +75,23 @@ class _ApprovalView extends StatefulWidget {
 }
 
 class _ApprovalViewState extends State<_ApprovalView> {
-  late _Pending? _pending = _pendingByApprover[widget.spec.approverName];
+  late _Pending? _pending = _restorePending();
+
+  _Pending? _restorePending() {
+    final saved = widget.hold?.pending?.call();
+    return saved != null
+        ? _Pending(saved.id, saved.url)
+        : _pendingByApprover[widget.spec.approverName];
+  }
+
+  Future<void> _savePending(_Pending? p) async {
+    if (p == null) {
+      _pendingByApprover.remove(_name);
+    } else {
+      _pendingByApprover[_name] = p;
+    }
+    await widget.hold?.savePending?.call(p?.id, p?.url);
+  }
   String? _status;
   bool _busy = false;
   Timer? _poll;
@@ -111,7 +127,7 @@ class _ApprovalViewState extends State<_ApprovalView> {
       });
       final data = res.data as Map;
       final pending = _Pending(data['id'] as String, data['url'] as String);
-      _pendingByApprover[_name] = pending;
+      await _savePending(pending);
       setState(() => _pending = pending);
       await _send();
       // Quiet while they look; rings again at the same volume if no answer.
@@ -153,11 +169,11 @@ class _ApprovalViewState extends State<_ApprovalView> {
       switch (row['status']) {
         case 'approved':
           _poll?.cancel();
-          _pendingByApprover.remove(_name);
+          await _savePending(null);
           widget.onPassed();
         case 'rejected':
           _poll?.cancel();
-          _pendingByApprover.remove(_name);
+          await _savePending(null);
           await widget.hold?.release();
           final note = row['note'] as String?;
           setState(() {

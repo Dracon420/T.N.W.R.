@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../core/models.dart';
-import '../core/schedule.dart';
 import '../proof/proof.dart';
 
 /// Full-screen alarm. The only ways out are passing the task's proofs or
@@ -20,16 +19,29 @@ class AlarmScreen extends StatefulWidget {
 }
 
 class _AlarmScreenState extends State<AlarmScreen> {
-  final Set<int> _passed = {};
   int? _active;
 
   /// Flash at 1 Hz: well under the 3 Hz photosensitive-seizure threshold.
   Timer? _flasher;
   bool _flashOn = false;
 
+  /// The saved task: passed proofs live there, so they survive Android
+  /// closing the app while the camera or messaging app is open.
+  NagTask get _live =>
+      widget.controller.store.byId(widget.task.id) ?? widget.task;
+  Set<int> get _passed => _live.passedProofs.toSet();
+
   @override
   void initState() {
     super.initState();
+    // Back to a photo approval still waiting for a verdict: reopen it so it
+    // keeps checking.
+    final approval = widget.task.proofs.indexWhere((p) => p is ApprovalProof);
+    if (approval >= 0 &&
+        _live.pendingApprovalId != null &&
+        !_passed.contains(approval)) {
+      _active = approval;
+    }
     if (widget.task.escalation.flashScreen) {
       _flasher = Timer.periodic(const Duration(milliseconds: 500),
           (_) => setState(() => _flashOn = !_flashOn));
@@ -51,18 +63,21 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 start: (wait) =>
                     widget.controller.holdForApproval(widget.task, wait),
                 release: widget.controller.releaseApprovalHold,
+                pending: () {
+                  final t = _live;
+                  return t.pendingApprovalId == null
+                      ? null
+                      : (id: t.pendingApprovalId!, url: t.pendingApprovalUrl!);
+                },
+                savePending: (id, url) =>
+                    widget.controller.savePendingApproval(widget.task, id, url),
               ))
       ];
 
   void _onPassed(int index) {
-    setState(() {
-      _passed.add(index);
-      _active = null;
-    });
-    if (proofSatisfied(
-        widget.task.proofMode, widget.task.proofs.length, _passed.length)) {
-      widget.controller.complete(widget.task);
-    }
+    setState(() => _active = null);
+    // Saved first; completes the task once enough proofs have passed.
+    widget.controller.proofPassed(_live, index);
   }
 
   @override
@@ -103,7 +118,8 @@ class _AlarmScreenState extends State<AlarmScreen> {
         ? theme.colorScheme.onError
         : theme.colorScheme.onErrorContainer;
     return ListenableBuilder(
-      listenable: widget.controller,
+      listenable:
+          Listenable.merge([widget.controller, widget.controller.store]),
       builder: (context, _) {
         final elapsed =
             DateTime.now().difference(task.ringingSince ?? DateTime.now());

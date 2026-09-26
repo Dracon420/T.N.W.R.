@@ -109,6 +109,9 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
       status: TaskStatus.scheduled,
       ringingSince: () => null,
       snoozesUsed: 0,
+      passedProofs: const [],
+      pendingApprovalId: () => null,
+      pendingApprovalUrl: () => null,
     ));
   }
 
@@ -226,6 +229,15 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
             ],
             selected: {_mode},
             onSelectionChanged: (s) => setState(() => _mode = s.first),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              _mode == ProofMode.all
+                  ? 'You must pass EVERY proof checked below.'
+                  : 'Passing ANY ONE proof checked below turns it off.',
+              style: TextStyle(color: theme.colorScheme.primary),
+            ),
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,

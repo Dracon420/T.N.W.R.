@@ -45,4 +45,30 @@ void main() {
     expect(saved?.escalation.escalationSound, AlarmSound.siren);
     expect(saved?.escalation.flashScreen, isTrue);
   });
+
+  testWidgets('"Any one" is saved when chosen', (tester) async {
+    tester.view.physicalSize = const Size(1000, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    NagTask? saved;
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () async => saved = await Navigator.of(context)
+              .push<NagTask>(
+                  MaterialPageRoute(builder: (_) => const TaskEditScreen())),
+          child: const Text('open'),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Dishes');
+    await tester.tap(find.text('Any one'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(saved?.proofMode, ProofMode.any);
+  });
 }
