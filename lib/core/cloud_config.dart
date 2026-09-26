@@ -4,7 +4,7 @@
 ///
 /// Supabase dashboard -> Project Settings -> API: "Project URL" and the
 /// "publishable" key (older projects: "anon").
-const supabaseUrl = '';
-const supabasePublishableKey = '';
+const supabaseUrl = 'https://mjzgyjolryhyqcovqhnj.supabase.co';
+const supabasePublishableKey = 'sb_publishable_hhehnSvQnNrcYgaAL0vYXA_603p8Xbz';
 
 bool get cloudConfigured => supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
