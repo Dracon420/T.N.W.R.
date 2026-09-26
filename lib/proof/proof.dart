@@ -26,8 +26,20 @@ abstract class ProofChallenge {
   Widget build(VoidCallback onPassed);
 }
 
-/// [taskTitle] is used by proofs that tell someone else about the task.
-ProofChallenge challengeFor(ProofSpec spec, {String taskTitle = ''}) =>
+/// Lets a challenge quiet the alarm while it waits on someone else.
+class AlarmHold {
+  const AlarmHold({required this.start, required this.release});
+
+  /// Silence the alarm for up to this long.
+  final Future<void> Function(Duration wait) start;
+
+  /// Ring again now, at the volume it had.
+  final Future<void> Function() release;
+}
+
+/// [taskTitle] and [hold] are for proofs that involve someone else.
+ProofChallenge challengeFor(ProofSpec spec,
+        {String taskTitle = '', AlarmHold? hold}) =>
     switch (spec) {
       MathProof() => MathChallenge(spec),
       TypingProof() => TypingChallenge(spec),
@@ -36,7 +48,8 @@ ProofChallenge challengeFor(ProofSpec spec, {String taskTitle = ''}) =>
       LocationProof() => LocationChallenge(spec),
       StepsProof() => StepsChallenge(spec),
       PhotoProof() => PhotoChallenge(spec),
-      ApprovalProof() => ApprovalChallenge(spec, taskTitle: taskTitle),
+      ApprovalProof() =>
+        ApprovalChallenge(spec, taskTitle: taskTitle, hold: hold),
     };
 
 /// Human-readable label for the editor's proof picker.

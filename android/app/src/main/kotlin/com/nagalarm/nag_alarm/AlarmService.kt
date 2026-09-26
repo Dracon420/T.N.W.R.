@@ -61,6 +61,16 @@ class AlarmService : Service() {
             if (!running) start(c)
         }
 
+        /**
+         * Silent until [untilMillis] while a photo approval is pending; 0 ends it.
+         * Afterwards it rings at the volume it had (silent time doesn't count).
+         */
+        fun hold(c: Context, id: String, untilMillis: Long) {
+            val alarm = AlarmStore.findRinging(c, id) ?: return
+            alarm.put("holdUntil", untilMillis)
+            AlarmStore.updateRinging(c, alarm)
+        }
+
         /** The task was proven or snoozed. The service stops on its next tick if nothing else rings. */
         fun stop(c: Context, id: String): Int = AlarmStore.removeRinging(c, id)
 
@@ -83,6 +93,8 @@ class AlarmService : Service() {
     private var pausedAt = 0L
     private var callEndedAt: Long? = null
     private var alertShown = false
+    private var held = false
+    private var heldAt = 0L
     private var vibrating = false
     private val vibrator: Vibrator by lazy {
         if (Build.VERSION.SDK_INT >= 31) {
@@ -140,6 +152,36 @@ class AlarmService : Service() {
         }
         val settings = AlarmStore.schedule(this)
         val now = System.currentTimeMillis()
+
+        // Waiting for a photo approval: quiet until the verdict or the wait ends.
+        if (alarm.optLong("holdUntil") > now) {
+            if (!held) {
+                if (pausedForCall) {
+                    // End the call pause here so its time isn't counted twice.
+                    alarm.put("pausedMs", alarm.optLong("pausedMs") + (now - pausedAt))
+                    pausedForCall = false
+                    callEndedAt = null
+                }
+                held = true
+                heldAt = now
+                AlarmStore.updateRinging(this, alarm)
+                stopSound()
+                stopVibration()
+                restoreVolume()
+                notifications.cancel(ALERT_ID)
+                alertShown = false
+                notifications.notify(STATUS_ID, statusNotification(alarm.optString("title"),
+                    paused = false, waiting = true))
+            }
+            return
+        }
+        if (held) {
+            alarm.put("pausedMs", alarm.optLong("pausedMs") + (now - heldAt))
+            alarm.remove("holdUntil")
+            AlarmStore.updateRinging(this, alarm)
+            held = false
+            notifications.notify(STATUS_ID, statusNotification(alarm.optString("title"), paused = false))
+        }
 
         val inCall = settings.optBoolean("pauseDuringCalls", true) &&
             audio.mode != AudioManager.MODE_NORMAL
@@ -317,12 +359,15 @@ class AlarmService : Service() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     /** Quiet, ongoing notification required for a foreground service. */
-    private fun statusNotification(title: String, paused: Boolean): Notification =
+    private fun statusNotification(title: String, paused: Boolean, waiting: Boolean = false): Notification =
         builder(STATUS_CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
-            .setContentText(if (paused) "Paused for your call. Comes back after it ends."
-                            else "Ringing until you prove it's done")
+            .setContentText(when {
+                waiting -> "Quiet while your photo is checked. Rings again if there's no answer."
+                paused -> "Paused for your call. Comes back after it ends."
+                else -> "Ringing until you prove it's done"
+            })
             .setOngoing(true)
             .setContentIntent(openAppIntent())
             .build()

@@ -24,6 +24,11 @@ class FakeEngine implements AlarmEngine {
   Future<void> ring(NagTask task) async => ringing.add(task.id);
   @override
   Future<void> stop(String id) async => stopped.add(id);
+  final holds = <String, DateTime>{};
+  @override
+  Future<void> hold(String id, DateTime until) async => holds[id] = until;
+  @override
+  Future<void> releaseHold(String id) async => holds.remove(id);
   @override
   Future<bool> isPausedForCall() async => paused;
 }

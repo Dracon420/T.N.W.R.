@@ -68,6 +68,21 @@ class AppController extends ChangeNotifier {
   bool get pausedForCall =>
       _engineRings ? _enginePausedForCall : _pausedAt != null;
 
+  /// Silent while a photo approval is pending (see [holdForApproval]).
+  String? _holdTaskId;
+  DateTime? _holdStarted;
+  DateTime? _holdUntil;
+
+  bool get waitingForApproval => _holdUntil != null;
+
+  /// Time left before the alarm rings again; null when not waiting.
+  Duration? get approvalWaitLeft {
+    final until = _holdUntil;
+    if (until == null) return null;
+    final left = until.difference(_now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
   NagTask? get ringingTask {
     final ringing =
         store.tasks.where((t) => t.status == TaskStatus.ringing).toList()
@@ -111,8 +126,19 @@ class AppController extends ChangeNotifier {
       var ringing = ringingTask;
       if (ringing == null) {
         _pausedAt = _callEndedAt = null;
+        _holdTaskId = _holdStarted = _holdUntil = null;
         if (ringer.isRinging) await _silence();
         return;
+      }
+
+      if (_holdUntil != null) {
+        if (ringing.id == _holdTaskId && now.isBefore(_holdUntil!)) {
+          notifyListeners(); // Countdown on the alarm screen.
+          return;
+        }
+        // No verdict in time (or another alarm took over): ring again.
+        await _endHold(now);
+        ringing = ringingTask!;
       }
 
       if (_engineRings) {
@@ -168,6 +194,47 @@ class AppController extends ChangeNotifier {
     await store.upsert(ringing.copyWith(
         ringingSince: () => ringing.ringingSince!.add(paused)));
     return false;
+  }
+
+  /// The photo was sent: stay silent up to [wait] for the approver's verdict.
+  /// If none comes, ring again at the volume it had when it went quiet.
+  Future<void> holdForApproval(NagTask t, Duration wait) async {
+    final now = _now();
+    // End a call pause here so its time isn't counted twice.
+    if (_pausedAt != null) {
+      await _shiftStart(t.id, now.difference(_pausedAt!));
+      _pausedAt = _callEndedAt = null;
+    }
+    _holdStarted ??= now; // A re-sent photo keeps the original start.
+    _holdTaskId = t.id;
+    _holdUntil = now.add(wait);
+    if (_engineRings) {
+      await engine!.hold(t.id, _holdUntil!);
+    } else {
+      await _silence();
+    }
+    notifyListeners();
+  }
+
+  /// The approver said no: ring again right away, at the same volume.
+  Future<void> releaseApprovalHold() async {
+    if (_holdStarted != null) await _endHold(_now());
+  }
+
+  Future<void> _endHold(DateTime now) async {
+    final id = _holdTaskId!;
+    final held = now.difference(_holdStarted!);
+    _holdTaskId = _holdStarted = _holdUntil = null;
+    // Silent time doesn't count toward escalation.
+    await _shiftStart(id, held);
+    if (_engineRings) await engine!.releaseHold(id);
+    notifyListeners();
+  }
+
+  Future<void> _shiftStart(String id, Duration by) async {
+    final t = store.byId(id);
+    if (t?.ringingSince == null) return;
+    await store.upsert(t!.copyWith(ringingSince: () => t.ringingSince!.add(by)));
   }
 
   Future<void> _silence() async {

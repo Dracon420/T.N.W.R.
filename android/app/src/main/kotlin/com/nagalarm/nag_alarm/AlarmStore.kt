@@ -75,6 +75,12 @@ object AlarmStore {
         }
     }
 
+    fun findRinging(c: Context, id: String): JSONObject? {
+        val ringing = ringing(c)
+        val i = ringing.indexOf(id)
+        return if (i >= 0) ringing.getJSONObject(i) else null
+    }
+
     /** Returns how many alarms are still ringing. */
     fun removeRinging(c: Context, id: String): Int {
         val kept = ringing(c).without(id)

@@ -20,6 +20,13 @@ abstract class AlarmEngine {
   /// The task was proven or snoozed.
   Future<void> stop(String id);
 
+  /// Silence [id] until [until] (waiting for a photo approval), then ring at
+  /// the volume it had.
+  Future<void> hold(String id, DateTime until);
+
+  /// End a [hold] early (the approver said no).
+  Future<void> releaseHold(String id);
+
   Future<bool> isPausedForCall();
 }
 
@@ -64,6 +71,14 @@ class AndroidAlarmEngine implements AlarmEngine {
 
   @override
   Future<void> stop(String id) => _channel.invokeMethod('stop', id);
+
+  @override
+  Future<void> hold(String id, DateTime until) => _channel.invokeMethod(
+      'hold', {'id': id, 'until': until.millisecondsSinceEpoch});
+
+  @override
+  Future<void> releaseHold(String id) =>
+      _channel.invokeMethod('hold', {'id': id, 'until': 0});
 
   @override
   Future<bool> isPausedForCall() async =>

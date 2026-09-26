@@ -393,6 +393,14 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
             if (approval != null) setState(() => _approval = approval);
           },
         ),
+        if (_approval case final ap?)
+          _slider('Quiet while waiting', ap.waitMinutes.toDouble(), 1, 20,
+              '${ap.waitMinutes} min',
+              (v) => _approval = ApprovalProof(
+                  approverName: ap.approverName,
+                  approverPhone: ap.approverPhone,
+                  waitMinutes: v.round()),
+              divisions: 19),
       ];
 
   Future<ApprovalProof?> _askApprover(BuildContext context) {

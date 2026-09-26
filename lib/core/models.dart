@@ -189,7 +189,8 @@ sealed class ProofSpec {
             threshold: (j['threshold'] as num).toDouble()),
         'approval' => ApprovalProof(
             approverName: j['approverName'] as String,
-            approverPhone: j['approverPhone'] as String? ?? ''),
+            approverPhone: j['approverPhone'] as String? ?? '',
+            waitMinutes: j['waitMinutes'] as int? ?? 10),
         final t => throw FormatException('Unknown proof type: $t'),
       };
 }
@@ -295,12 +296,17 @@ class ApprovalProof extends ProofSpec {
 
   /// Where the link is texted; empty means "pick how to send it" each time.
   final String approverPhone;
-  const ApprovalProof({required this.approverName, this.approverPhone = ''});
+
+  /// After the photo is sent, the alarm stays silent this long (1-20 min)
+  /// waiting for the verdict, then rings again at the volume it had.
+  final int waitMinutes;
+  const ApprovalProof(
+      {required this.approverName, this.approverPhone = '', this.waitMinutes = 10});
   @override
   String get type => 'approval';
   @override
   Map<String, dynamic> get _fields =>
-      {'approverName': approverName, 'approverPhone': approverPhone};
+      {'approverName': approverName, 'approverPhone': approverPhone, 'waitMinutes': waitMinutes};
 }
 
 /// Whether every proof is required, or any single one is enough.

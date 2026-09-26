@@ -155,7 +155,7 @@ These need a phone, and you set them up **when you create the reminder**:
 | **Be at a place** | Stand at the place and switch it on; name it and set a radius (25–500 m) | Be there and tap **I'm here, check in** |
 | **Walk steps** | Choose 20–2000 steps | Walk them. Counting starts when you open the challenge |
 | **Photo of the finished task** | Photograph what "done" looks like (the empty sink, the made bed) | Take a new photo (camera only, no gallery). The phone checks it shows the same things as the reference photo. Nothing is uploaded |
-| **Photo approved by someone** | Enter who approves (e.g. your wife) and optionally their mobile number | Take a photo. Your messaging app opens with a link ready to send. They tap **Approve** or **Not done** on a web page (no app needed). The alarm stops the moment they approve. Needs the [online setup](docs/ALEXA_SETUP.md#part-e-photo-approval) |
+| **Photo approved by someone** | Enter who approves (e.g. your wife), optionally their mobile number, and how long to wait for them (**Quiet while waiting**, 1–20 min) | Take a photo. Your messaging app opens with a link ready to send. The alarm goes **silent** for the waiting time; if they haven't answered by then, it rings again **at the volume it had**. They tap **Approve** or **Not done** on a web page (no app needed). Approve stops the alarm; Not done brings it back right away. Needs the [online setup](docs/ALEXA_SETUP.md#part-e-photo-approval) |
 
 The automatic photo check runs on the phone, so it's good at "is this the
 sink?" but can be fooled by a clever cheater. **Photo approved by someone**

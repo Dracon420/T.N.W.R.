@@ -43,7 +43,16 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   List<ProofChallenge> get _challenges =>
-      [for (final p in widget.task.proofs) challengeFor(p, taskTitle: widget.task.title)];
+      [
+        for (final p in widget.task.proofs)
+          challengeFor(p,
+              taskTitle: widget.task.title,
+              hold: AlarmHold(
+                start: (wait) =>
+                    widget.controller.holdForApproval(widget.task, wait),
+                release: widget.controller.releaseApprovalHold,
+              ))
+      ];
 
   void _onPassed(int index) {
     setState(() {
@@ -115,7 +124,16 @@ class _AlarmScreenState extends State<AlarmScreen> {
                   style: theme.textTheme.titleMedium?.copyWith(color: onColor)),
             ],
             const SizedBox(height: 16),
-            if (widget.controller.pausedForCall)
+            if (widget.controller.approvalWaitLeft case final left?)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.hourglass_top),
+                  title: const Text('Quiet while waiting for approval'),
+                  subtitle: Text('Rings again in ${_fmt(left)} at the same '
+                      'volume, unless they approve first.'),
+                ),
+              )
+            else if (widget.controller.pausedForCall)
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.phone_in_talk),

@@ -28,9 +28,10 @@ Uri smsUri(String phone, String body) => Uri(
     );
 
 class ApprovalChallenge extends ProofChallenge {
-  const ApprovalChallenge(this.spec, {this.taskTitle = ''});
+  const ApprovalChallenge(this.spec, {this.taskTitle = '', this.hold});
   final ApprovalProof spec;
   final String taskTitle;
+  final AlarmHold? hold;
 
   @override
   String get title => 'Photo approved by ${spec.approverName}';
@@ -45,7 +46,8 @@ class ApprovalChallenge extends ProofChallenge {
       : 'Needs the online setup (see docs/ALEXA_SETUP.md, part A).';
   @override
   Widget build(VoidCallback onPassed) =>
-      _ApprovalView(spec: spec, taskTitle: taskTitle, onPassed: onPassed);
+      _ApprovalView(
+          spec: spec, taskTitle: taskTitle, hold: hold, onPassed: onPassed);
 }
 
 /// A request waiting for a verdict, kept across rebuilds of the alarm screen.
@@ -59,9 +61,13 @@ final _pendingByApprover = <String, _Pending>{};
 
 class _ApprovalView extends StatefulWidget {
   const _ApprovalView(
-      {required this.spec, required this.taskTitle, required this.onPassed});
+      {required this.spec,
+      required this.taskTitle,
+      required this.hold,
+      required this.onPassed});
   final ApprovalProof spec;
   final String taskTitle;
+  final AlarmHold? hold;
   final VoidCallback onPassed;
 
   @override
@@ -108,6 +114,8 @@ class _ApprovalViewState extends State<_ApprovalView> {
       _pendingByApprover[_name] = pending;
       setState(() => _pending = pending);
       await _send();
+      // Quiet while they look; rings again at the same volume if no answer.
+      await widget.hold?.start(Duration(minutes: widget.spec.waitMinutes));
       _startPolling();
     } catch (e) {
       setState(() => _status = "Couldn't send the photo: $e");
@@ -150,6 +158,7 @@ class _ApprovalViewState extends State<_ApprovalView> {
         case 'rejected':
           _poll?.cancel();
           _pendingByApprover.remove(_name);
+          await widget.hold?.release();
           final note = row['note'] as String?;
           setState(() {
             _pending = null;
@@ -181,7 +190,10 @@ class _ApprovalViewState extends State<_ApprovalView> {
           Text('Waiting for $_name to approve…',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
-          const Text('This closes by itself once they approve.',
+          Text(
+              'The alarm is quiet for up to ${widget.spec.waitMinutes} min while '
+              'they look, then rings again at the same volume. This closes '
+              'by itself once they approve.',
               textAlign: TextAlign.center),
           const SizedBox(height: 12),
           Wrap(spacing: 8, alignment: WrapAlignment.center, children: [

@@ -88,6 +88,11 @@ class MainActivity : FlutterActivity() {
                     if (left == 0) setShowOverLockScreen(false)
                     result.success(null)
                 }
+                "hold" -> {
+                    val args = call.arguments as Map<*, *>
+                    AlarmService.hold(this, args["id"] as String, (args["until"] as Number).toLong())
+                    result.success(null)
+                }
                 "isPausedForCall" -> result.success(AlarmService.pausedForCall)
                 "setupStatus" -> result.success(setupStatus())
                 "fixSetup" -> {
