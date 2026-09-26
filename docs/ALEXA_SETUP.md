@@ -45,9 +45,11 @@ marked 📝.
    - `alexa-code` ← [`supabase/functions/alexa-code/index.ts`](../supabase/functions/alexa-code/index.ts)
    - `alexa-sync` ← [`supabase/functions/alexa-sync/index.ts`](../supabase/functions/alexa-sync/index.ts)
    - `alexa-pair` ← [`supabase/functions/alexa-pair/index.ts`](../supabase/functions/alexa-pair/index.ts)
-   - Then open **alexa-pair → Details** and turn **off** "Enforce JWT
-     verification" (or "Verify JWT"). Alexa calls this one, not the app, and
-     it's protected by its own secret instead.
+   - Then, for **each** function, open its **Settings** and turn **off** "Verify
+     JWT with legacy secret" → **Save changes**. Each function checks access itself:
+     the app's sign-in for `alexa-code`/`alexa-sync`, and a shared secret for
+     `alexa-pair`. Supabase recommends this, and the legacy check can reject new-style
+     sign-ins.
 5. **Make a pairing secret.** Any long random text, for example 40 random
    letters and numbers. 📝 **PAIR_SECRET**
 6. 📝 Copy your **Project URL** and **publishable key** (older projects call it
@@ -131,8 +133,9 @@ with **Approve** and **Not done** buttons. They don't need the app. The page liv
 2. **Table and photo storage.** Supabase **SQL Editor → New query**: paste all of
    [`supabase/migrations/002_photo_approvals.sql`](../supabase/migrations/002_photo_approvals.sql) → **Run**.
 3. **Two more functions** (Edge Functions → Deploy a new function → Via Editor):
-   - `approval-create` ← [`supabase/functions/approval-create/index.ts`](../supabase/functions/approval-create/index.ts). Keep JWT verification **on**; the app calls it.
-   - `approval` ← [`supabase/functions/approval/index.ts`](../supabase/functions/approval/index.ts). Turn **off** "Enforce JWT verification". The web page calls it, and each link carries its own secret token.
+   - `approval-create` ← [`supabase/functions/approval-create/index.ts`](../supabase/functions/approval-create/index.ts). The function checks the app's sign-in itself.
+   - `approval` ← [`supabase/functions/approval/index.ts`](../supabase/functions/approval/index.ts). The web page calls it, and each link carries its own secret token.
+   - For **both**: **Settings** → turn **off** "Verify JWT with legacy secret" → **Save changes**.
 4. **Turn on the web page.** On GitHub: the **TNWR** repo → **Settings → Pages** →
    Source **Deploy from a branch**, Branch **main**, folder **/docs** → **Save**. After a
    minute it's live at `https://dracon420.github.io/TNWR/approve/`. (Opening that
@@ -155,7 +158,7 @@ link's short-lived signed address, and **deleted as soon as the approver decides
 | Linked, but the Echo never reminds | Did you say yes to reminder permission? (Alexa app → Skills → Naggy Wife → Settings → Manage permissions.) In Supabase → Edge Functions → alexa-sync → Logs, look for errors: `401/403` means the Client Id/Secret are wrong. In the skill console → Code → CloudWatch logs, look for "create failed". |
 | App says "Alexa sync failed" | Check the alexa-sync logs in Supabase. |
 | "Couldn't send the photo" | Did you run `002_photo_approvals.sql` and deploy `approval-create`? Check its logs in Supabase. |
-| Approval link says "invalid or has expired" | The `approval` function must have JWT verification **off**. Links stop working once a decision is made. |
+| Approval link says "invalid or has expired" | Links only work until a decision is made. If it's a new link, check that the `approval` function has "Verify JWT with legacy secret" **off**. |
 | Approval page doesn't load at all | GitHub → Settings → Pages must be on (main, /docs). It can take a few minutes the first time. |
 | Reminders at the wrong hour | The Echo uses its own time zone setting (Alexa app → Devices → your Echo → Time Zone). It should match your phone. |
 

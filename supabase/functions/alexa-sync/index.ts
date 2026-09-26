@@ -7,11 +7,13 @@
 // Self-contained so it can be pasted into the Supabase dashboard editor.
 import { createClient, type User } from "jsr:@supabase/supabase-js@2";
 
-/** Service-role client: bypasses row-level security, server side only. */
-export const admin = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+/** Server key: SUPABASE_SECRET_KEYS on new projects, service_role on older ones. */
+function serverKey(): string {
+  const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
+  return keys.default ?? Object.values(keys)[0] ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+}
+/** Server-side client: bypasses row-level security. */
+export const admin = createClient(Deno.env.get("SUPABASE_URL")!, serverKey());
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
