@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../alexa/alexa_link.dart';
+import 'insets.dart';
 
 /// Connect an Echo: get a code here, say it to the "naggy wife" skill.
 class AlexaScreen extends StatefulWidget {
@@ -63,7 +64,7 @@ class _AlexaScreenState extends State<AlexaScreen> {
             );
           }
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: screenListPadding(context),
             children: [
               if (alexa.linked) ...[
                 const ListTile(

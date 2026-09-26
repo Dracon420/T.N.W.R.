@@ -4,6 +4,7 @@ import '../alarm/alarm_engine.dart';
 import '../core/settings.dart';
 import '../alexa/alexa_link.dart';
 import 'alexa_screen.dart';
+import 'insets.dart';
 import 'phone_setup.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -27,7 +28,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListenableBuilder(
         listenable: settings,
         builder: (context, _) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: screenListPadding(context),
           children: [
             if (engine case final AndroidAlarmEngine engine) ...[
               section('Background alarms'),

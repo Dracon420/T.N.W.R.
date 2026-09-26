@@ -13,6 +13,7 @@ import '../proof/nfc_challenge.dart';
 import '../proof/photo_challenge.dart';
 import '../proof/scan_challenge.dart';
 import '../proof/steps_challenge.dart';
+import 'insets.dart';
 
 /// Create or edit a reminder. Pops with the saved [NagTask], or null.
 class TaskEditScreen extends StatefulWidget {
@@ -125,7 +126,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
         actions: [TextButton(onPressed: _save, child: const Text('Save'))],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: screenListPadding(context),
         children: [
           TextField(
             controller: _title,

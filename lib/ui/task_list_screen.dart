@@ -84,7 +84,9 @@ class TaskListScreen extends StatelessWidget {
             );
           }
           return ListView(
-            padding: const EdgeInsets.only(bottom: 96),
+            // Room for the floating button and the phone's navigation bar.
+            padding: EdgeInsets.only(
+                bottom: 96 + MediaQuery.viewPaddingOf(context).bottom),
             children: [
               if (controller.engine case final AndroidAlarmEngine engine)
                 PhoneSetupBanner(engine: engine),

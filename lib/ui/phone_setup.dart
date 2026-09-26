@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../alarm/alarm_engine.dart';
+import 'insets.dart';
 
 /// Checklist of what Android must allow for alarms to ring with the app
 /// closed. Re-checks whenever the user comes back from a settings page.
@@ -16,7 +17,7 @@ class PhoneSetupScreen extends StatelessWidget {
       body: _SetupStatus(
         engine: engine,
         builder: (context, missing) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: screenListPadding(context),
           children: [
             Text(
               missing.isEmpty
